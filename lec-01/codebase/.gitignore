@@ -1,0 +1,6 @@
+.venv/
+venv/
+devops-linux-demo/
+__pycache__/
+.DS_Store
+Thumbs.db
