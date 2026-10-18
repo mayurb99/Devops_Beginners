@@ -1,0 +1,12 @@
+# Never commit secrets or local junk
+.env
+*.pem
+*.key
+id_rsa
+id_rsa.pub
+.venv/
+venv/
+__pycache__/
+node_modules/
+.DS_Store
+Thumbs.db
