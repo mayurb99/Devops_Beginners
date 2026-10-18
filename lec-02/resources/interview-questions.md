@@ -88,20 +88,3 @@ Speak in your own words. Do not claim you ran production GitHub if you only used
 
 **Spoken:** “No. Agile is how we plan and build in small slices. DevOps is how we test, release, run, and monitor. You can be Agile and still deploy by hand once a quarter.”
 
----
-
-### 14. SLA vs SLO vs SLI?
-
-**Spoken:** “SLA is the customer contract. SLO is our internal target. SLI is the number we measure, like error rate.”
-
----
-
-### 15. RTO vs RPO?
-
-**Spoken:** “RTO is how long we can be down. RPO is how much data we can lose.”
-
----
-
-### 16. What are DORA metrics?
-
-**Spoken:** “Four numbers: how often we deploy, how long a change takes to go live, how often deploys fail, and how fast we recover.”

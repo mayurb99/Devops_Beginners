@@ -4,7 +4,7 @@
 
 **Curriculum:** version control, Git vs GitHub, commits, branches, clone/push/pull, pull requests, protecting `main`, never commit secrets.
 
-**Bonus in the same PowerPoint:** Waterfall, Agile, Scrum, Kanban, Agile vs DevOps, plus a few interview names (DORA, SLA/SLO/SLI, RTO/RPO).
+**Bonus in the same PowerPoint:** Waterfall, Agile, Scrum, Kanban, Agile vs DevOps.
 
 Do not teach GitHub Actions, Docker, or AWS today.
 

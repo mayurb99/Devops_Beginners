@@ -1,7 +1,5 @@
 Lecture 2 Git demo
 Repo: https://github.com/mayurb99/Devops_Beginners
-Do NOT run git init. Do NOT create a new repository. Do NOT merge from the terminal.
-This repo already exists. Merge / pull request is done in the GitHub website (UI).
 
 Open Git Bash. Go to the folder where you cloned this course repo
 (example on this laptop):
@@ -134,13 +132,3 @@ H. Update your laptop after the UI merge
   git branch -d add-my-note
 
 
---------------------------------------------------
-Do not do in this demo
---------------------------------------------------
-
-  git init
-  git merge
-  Creating a new GitHub repository
-  git add .
-  Committing .env or any secret
-  git push --force
