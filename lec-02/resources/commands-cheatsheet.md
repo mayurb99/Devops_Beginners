@@ -19,6 +19,9 @@ Base URL: `http://127.0.0.1:8080`
 | `curl -i URL` | Include response headers and status |
 | `curl -v URL` | Verbose: DNS, connect, request, response |
 | `curl -X POST URL` | Use POST instead of GET |
+| `curl -X PUT URL` | Replace the whole resource |
+| `curl -X PATCH URL` | Change part of the resource |
+| `curl -X DELETE URL` | Remove the resource |
 | `curl -H "Name: value"` | Add a request header |
 | `curl -d '{"text":"hi"}'` | Send a request body |
 | `curl -o file.txt URL` | Save the body to a file |
@@ -31,6 +34,13 @@ curl http://127.0.0.1:8080/notes
 curl -X POST http://127.0.0.1:8080/notes \
   -H "Content-Type: application/json" \
   -d '{"text": "hello"}'
+curl -X PUT http://127.0.0.1:8080/notes/1 \
+  -H "Content-Type: application/json" \
+  -d '{"text": "replaced"}'
+curl -X PATCH http://127.0.0.1:8080/notes/2 \
+  -H "Content-Type: application/json" \
+  -d '{"text": "patched"}'
+curl -i -X DELETE http://127.0.0.1:8080/notes/1
 curl -i http://127.0.0.1:8080/does-not-exist
 curl -i http://127.0.0.1:8080/notes/secret
 curl -i http://127.0.0.1:8080/notes/secret -H "X-API-Key: lecture2-key"

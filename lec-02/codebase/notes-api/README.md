@@ -22,6 +22,9 @@ Leave that window open. In a second terminal, follow `../api-lab-instructions.tx
 | GET | `/health` | No | Is the process up? |
 | GET | `/notes` | No | List notes |
 | POST | `/notes` | No | Add a note. JSON: `{"text":"..."}` |
+| PUT | `/notes/1` | No | Replace the whole note |
+| PATCH | `/notes/2` | No | Change only the field you send |
+| DELETE | `/notes/1` | No | Remove that note |
 | GET | `/notes/secret` | Header `X-API-Key: lecture2-key` | Demo of 200 vs 401 |
 
 ## Files

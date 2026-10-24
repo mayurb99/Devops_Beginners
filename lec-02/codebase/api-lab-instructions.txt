@@ -14,7 +14,7 @@ A. Start the API (leave this window open)
 
 You should see:
 
-  notes-api listening on http://127.0.0.1:8080
+  API is running at http://127.0.0.1:8080
 
 If python fails, try:
 
@@ -67,7 +67,39 @@ Your new note should be in the list. Status of the POST should be 201 Created.
 
 
 --------------------------------------------------
-E. Missing path (GET, status 404)
+E. Change a note (PUT = replace, PATCH = change one field)
+--------------------------------------------------
+
+PUT replaces the whole note. Our note only has text, so you send the new text:
+
+  curl -i -X PUT http://127.0.0.1:8080/notes/1 \
+    -H "Content-Type: application/json" \
+    -d '{"text": "Linux (updated with PUT)"}'
+
+PATCH changes only the field you send:
+
+  curl -i -X PATCH http://127.0.0.1:8080/notes/2 \
+    -H "Content-Type: application/json" \
+    -d '{"text": "REST APIs (updated with PATCH)"}'
+
+Then list again:
+
+  curl http://127.0.0.1:8080/notes
+
+
+--------------------------------------------------
+F. Delete a note (DELETE)
+--------------------------------------------------
+
+  curl -i -X DELETE http://127.0.0.1:8080/notes/1
+
+List again. Note 1 should be gone.
+
+  curl http://127.0.0.1:8080/notes
+
+
+--------------------------------------------------
+G. Missing path (GET, status 404)
 --------------------------------------------------
 
   curl -i http://127.0.0.1:8080/does-not-exist
@@ -76,7 +108,7 @@ You should see 404 and a JSON error.
 
 
 --------------------------------------------------
-F. API key (401 then 200)
+H. API key (401 then 200)
 --------------------------------------------------
 
 Wrong or missing key:
@@ -93,17 +125,17 @@ You should see 200.
 
 
 --------------------------------------------------
-G. Optional — Postman
+I. Optional — Postman
 --------------------------------------------------
 
 1. Open Postman.
 2. New request. Method GET. URL http://127.0.0.1:8080/health
 3. Send. Status should be 200.
-4. Repeat GET /notes, POST /notes, GET /notes/secret with header X-API-Key.
+4. Repeat GET, POST, PUT, PATCH, DELETE, and GET /notes/secret with header X-API-Key.
 
 
 --------------------------------------------------
-H. Optional — the cloud is an API too
+J. Optional — the cloud is an API too
    (skip if AWS CLI is not installed yet)
 --------------------------------------------------
 
@@ -115,7 +147,7 @@ If it fails with "Unable to locate credentials", that is fine. AWS is Lecture 4.
 
 
 --------------------------------------------------
-I. Stop the API
+K. Stop the API
 --------------------------------------------------
 
 Go back to the first window. Press Ctrl+C.
