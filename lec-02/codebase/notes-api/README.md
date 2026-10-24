@@ -1,27 +1,33 @@
 # notes-api
 
-Tiny starter for the 16-lecture DevOps course.
+Tiny API for the 16-lecture DevOps course.
 
-This is **not** a running server yet. Later lectures will turn it into a real API, then Docker, then AWS.
+This is **not** a production server. Later lectures will package it with Docker, then run it on a small AWS instance.
 
-## What it is today
+You **call** it today. You do not write it.
 
-A folder of notes. You will put this on GitHub with a branch and a pull request.
+## Run
+
+```bash
+cd lec-02/codebase/notes-api
+python notes-api.py
+```
+
+Leave that window open. In a second terminal, follow `../api-lab-instructions.txt`.
+
+## Endpoints
+
+| Method | Path | Auth | Meaning |
+|---|---|---|---|
+| GET | `/health` | No | Is the process up? |
+| GET | `/notes` | No | List notes |
+| POST | `/notes` | No | Add a note. JSON: `{"text":"..."}` |
+| GET | `/notes/secret` | Header `X-API-Key: lecture2-key` | Demo of 200 vs 401 |
 
 ## Files
 
 | File | Commit it? |
 |---|---|
+| `notes-api.py` | Yes |
 | `README.md` | Yes |
-| `notes.txt` | Yes |
-| `.gitignore` | Yes |
-| `.env.example` | Yes — fake settings, no real secrets |
-| `.env` | **Never** — real secrets. Git ignores it. |
-
-## Lab
-
-This folder already lives in https://github.com/mayurb99/Devops_Beginners
-
-Do not `git init`. Do not create another repository.
-
-Follow `../git-demo-instructions.txt`: branch, edit `notes.txt`, commit, push, then open a **pull request in the GitHub UI**.
+| `.env` with a real secret | **Never** |

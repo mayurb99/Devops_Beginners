@@ -1,0 +1,132 @@
+Lecture 2 REST API lab
+You will CALL notes-api. Do not edit the Python file unless the tutor asks.
+
+Need: Git Bash (or any terminal) and Python 3.
+Postman is optional. AWS CLI is optional (Lecture 4 is AWS).
+
+
+--------------------------------------------------
+A. Start the API (leave this window open)
+--------------------------------------------------
+
+  cd lec-02/codebase/notes-api
+  python notes-api.py
+
+You should see:
+
+  notes-api listening on http://127.0.0.1:8080
+
+If python fails, try:
+
+  python3 notes-api.py
+
+Keep this window running. Open a SECOND terminal for the rest.
+
+
+--------------------------------------------------
+B. Health check (GET, status 200)
+--------------------------------------------------
+
+  curl http://127.0.0.1:8080/health
+
+You should see JSON: {"status": "ok"}
+
+See headers too:
+
+  curl -i http://127.0.0.1:8080/health
+
+-i means "include response headers". Look for HTTP/1.1 200 and Content-Type: application/json.
+
+
+--------------------------------------------------
+C. List notes (GET, JSON array)
+--------------------------------------------------
+
+  curl http://127.0.0.1:8080/notes
+
+
+--------------------------------------------------
+D. Add a note (POST, status 201)
+--------------------------------------------------
+
+  curl -i -X POST http://127.0.0.1:8080/notes ^
+    -H "Content-Type: application/json" ^
+    -d "{\"text\": \"I completed the Lecture 2 API lab\"}"
+
+In Git Bash / Linux / macOS use this instead of the two ^ lines:
+
+  curl -i -X POST http://127.0.0.1:8080/notes \
+    -H "Content-Type: application/json" \
+    -d '{"text": "I completed the Lecture 2 API lab"}'
+
+Then list again:
+
+  curl http://127.0.0.1:8080/notes
+
+Your new note should be in the list. Status of the POST should be 201 Created.
+
+
+--------------------------------------------------
+E. Missing path (GET, status 404)
+--------------------------------------------------
+
+  curl -i http://127.0.0.1:8080/does-not-exist
+
+You should see 404 and a JSON error.
+
+
+--------------------------------------------------
+F. API key (401 then 200)
+--------------------------------------------------
+
+Wrong or missing key:
+
+  curl -i http://127.0.0.1:8080/notes/secret
+
+You should see 401.
+
+Correct key:
+
+  curl -i http://127.0.0.1:8080/notes/secret -H "X-API-Key: lecture2-key"
+
+You should see 200.
+
+
+--------------------------------------------------
+G. Optional — Postman
+--------------------------------------------------
+
+1. Open Postman.
+2. New request. Method GET. URL http://127.0.0.1:8080/health
+3. Send. Status should be 200.
+4. Repeat GET /notes, POST /notes, GET /notes/secret with header X-API-Key.
+
+
+--------------------------------------------------
+H. Optional — the cloud is an API too
+   (skip if AWS CLI is not installed yet)
+--------------------------------------------------
+
+  aws --version
+  aws sts get-caller-identity
+
+That command is an HTTPS call to AWS, same idea as curl to notes-api.
+If it fails with "Unable to locate credentials", that is fine. AWS is Lecture 4.
+
+
+--------------------------------------------------
+I. Stop the API
+--------------------------------------------------
+
+Go back to the first window. Press Ctrl+C.
+
+
+--------------------------------------------------
+Do not do in this lab
+--------------------------------------------------
+
+  Editing notes-api.py to "improve" it
+  git init
+  Creating a new GitHub repository
+  Spending money in AWS
+  Committing a real secret

@@ -1,90 +1,93 @@
 # Lecture 2 interview questions
 
-Speak in your own words. Do not claim you ran production GitHub if you only used this lab.
+Speak in your own words. Do not claim you built production APIs if you only called notes-api on a laptop.
 
 ---
 
-## Git and GitHub
+## 1. What is an API?
 
-### 1. What is Git? What is GitHub?
+**Full answer:** An API (Application Programming Interface) is a contract: you send a request in an agreed shape, and the other program sends a response. In this course we mean a REST API over HTTP.
 
-**Full answer:** Git is the version-control tool on your computer. It stores snapshots (commits) of files. GitHub is a website that hosts Git repositories so a team can share them, review pull requests, and protect `main`.
+**Spoken:** “An API is how one program asks another program to do something, using a documented URL, method, and JSON body, then reading the status code and body that come back.”
 
-**Spoken:** “Git is local history. GitHub is the shared copy plus PRs and permissions. GitLab and Azure Repos do a similar job.”
-
-**Trap:** “Git and GitHub are the same.” — No.
+**Example:** `GET /health` on notes-api returns `{"status":"ok"}`.
 
 ---
 
-### 2. What is a commit?
+## 2. What is REST?
 
-**Spoken:** “A commit is a snapshot of the project with a message, an author, and a pointer to the previous commit. It is not a zip email. You can go back to it.”
+**Full answer:** REST is a style for HTTP APIs. You use URLs for resources (`/notes`) and HTTP methods for actions (GET to read, POST to create). You do not need to recite Roy Fielding.
 
----
-
-### 3. What is staging (`git add`)?
-
-**Spoken:** “Staging is the waiting room. `git add` chooses which changes go into the *next* commit. I do not always `git add .` — I look at `git status` first so a secret or a junk file does not go in.”
+**Spoken:** “REST APIs expose resources as URLs and use GET, POST, PUT, PATCH, DELETE instead of inventing custom verbs for every action.”
 
 ---
 
-### 4. Branch vs merge vs pull request?
+## 3. HTTP vs HTTPS?
 
-**Spoken:** “A branch is a line of work. Merge brings that line into another branch. A pull request is a GitHub request: please review my branch and then merge it into `main`. I do not push straight to `main` on a team.”
+**Spoken:** “HTTP is the protocol. HTTPS is HTTP inside TLS, so the path is encrypted. Browsers and AWS APIs use HTTPS. Our class API is HTTP on localhost because it never leaves the laptop.”
 
----
-
-### 5. clone vs pull vs fetch vs push?
-
-**Spoken:** “Clone copies the repo the first time. Fetch downloads new commits. Pull is fetch plus merge. Push uploads my commits to GitHub.”
+**Trap:** “HTTPS is a different language than HTTP.” No. Same messages, encrypted transport.
 
 ---
 
-### 6. Fork vs clone?
+## 4. What is in an HTTP request?
 
-**Spoken:** “Clone copies a repo I can already push to, or a local copy to work in. A fork is a copy *under my GitHub account* of someone else’s repo, so I can open a PR back to them.”
-
----
-
-### 7. What should never be committed?
-
-**Spoken:** “Passwords, API keys, cloud keys, private SSH keys, `.env`. I use `.gitignore` and I commit `.env.example` with fake values. If I commit a secret, I rotate the key — deleting the file in a later commit is not enough, because history still has it.”
+**Spoken:** “Method, URL, headers, and sometimes a body. Example: POST /notes with Content-Type application/json and a JSON body.”
 
 ---
 
-### 8. Why protect `main`?
+## 5. What is in an HTTP response?
 
-**Spoken:** “So nobody force-pushes or merges without a review. Production should come from `main`. Broken experiments stay on branches.”
-
----
-
-### 9. How do you undo a local edit you have not committed?
-
-**Spoken:** “`git restore filename` throws away uncommitted changes to that file. I do not rewrite history that other people already pulled.”
+**Spoken:** “A status code, headers, and usually a body. I always read the status before I trust the body.”
 
 ---
 
-### 10. What does a merge conflict mean?
+## 6. GET vs POST vs PUT vs PATCH vs DELETE?
 
-**Spoken:** “Two branches changed the same lines. Git will not guess. I open the file, keep the right text, `git add`, and commit.”
+**Spoken:** “GET reads and should not change data. POST creates. PUT replaces the whole resource. PATCH changes part of it. DELETE removes it.”
 
----
-
-## Bonus — ways of working
-
-### 11. Waterfall vs Agile?
-
-**Spoken:** “Waterfall is long phases and one late release. Agile is short cycles and frequent working software. Waterfall fits a fixed legal scope. Agile fits learning as you build.”
+**Ops angle:** A load balancer health check is almost always GET. A deploy webhook is often POST.
 
 ---
 
-### 12. Scrum vs Kanban?
+## 7. 200 vs 201 vs 400 vs 401 vs 403 vs 404?
 
-**Spoken:** “Scrum uses time-boxed sprints and a sprint goal. Kanban uses a board and limits work in progress, with no required sprint length.”
+**Spoken:** “200 is OK. 201 is created. 400 means my request was malformed. 401 means I did not authenticate. 403 means I authenticated but I am not allowed. 404 means that URL is not there.”
+
+**Trap:** Mixing 401 and 403. Missing API key is 401. Valid user, wrong role is 403.
 
 ---
 
-### 13. Is Agile the same as DevOps?
+## 8. 500 vs 502 vs 503?
 
-**Spoken:** “No. Agile is how we plan and build in small slices. DevOps is how we test, release, run, and monitor. You can be Agile and still deploy by hand once a quarter.”
+**Spoken:** “500 is the server itself crashed. 502 is a proxy in front got a bad answer from behind it. 503 means the service is up but cannot take work — overloaded or draining.”
 
+---
+
+## 9. What is JSON?
+
+**Spoken:** “JavaScript Object Notation. Text with keys and values, curly braces for objects, square brackets for lists. APIs use it because every language can parse it.”
+
+---
+
+## 10. What is an API key? What is a bearer token?
+
+**Spoken:** “An API key is a secret string I send in a header, like X-API-Key. A bearer token is usually a short-lived token in the Authorization header: Bearer …. Both prove who I am. I never commit them to Git.”
+
+---
+
+## 11. Why does a DevOps engineer care about APIs?
+
+**Spoken:** “Everything we automate is an API: AWS CLI, Terraform, kubectl, GitHub Actions. If I cannot read a 403 JSON error, I cannot debug a pipeline.”
+
+---
+
+## 12. How do you call an API from the terminal?
+
+**Spoken:** “curl. I use -i to see the status, -H for headers, -d for a body, -X for the method.”
+
+---
+
+## 13. The health check passed but users still fail. What might be true?
+
+**Spoken:** “/health only proves the process can answer. It may not prove the database, IAM, or a downstream API. I still read application logs and a real user request.”

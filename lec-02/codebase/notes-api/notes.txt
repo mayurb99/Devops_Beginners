@@ -1,4 +1,0 @@
-# Course notes (plain text on purpose)
-
-- Lecture 1: DevOps loop, Linux, grep ERROR
-- Lecture 2: Git, GitHub, pull requests

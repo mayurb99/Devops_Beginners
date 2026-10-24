@@ -1,61 +1,63 @@
 # Lecture 2 command cheat sheet
 
-Run in Git Bash, WSL, or Linux. GitHub steps need a browser.
+Run in Git Bash, WSL, or Linux. Postman is a separate app.
 
-## See Git
+## Start notes-api
 
-| Command | Purpose |
-|---|---|
-| `git --version` | Is Git installed? |
-| `git status` | What changed? What is staged? |
-| `git diff` | Unstaged changes in files |
-| `git diff --staged` | What you are about to commit |
-| `git log --oneline` | Short history |
+```bash
+cd lec-02/codebase/notes-api
+python notes-api.py
+```
 
-## Save work
+Base URL: `http://127.0.0.1:8080`
 
-| Command | Purpose |
-|---|---|
-| `git clone URL` | Copy a GitHub repo to your laptop (already done for this course) |
-| `git add file` | Put that file in staging |
-| `git add .` | Stage everything — look at `status` first |
-| `git commit -m "Clear message"` | Save a snapshot |
-| `git restore file` | Throw away uncommitted edits to that file |
-
-## Branches
+## curl
 
 | Command | Purpose |
 |---|---|
-| `git branch` | List branches |
-| `git checkout -b my-feature` | Create and switch to a branch |
-| `git checkout main` | Go back to main |
-| Merge | Do this in the GitHub UI: Pull request → Merge |
+| `curl URL` | GET that URL, print the body |
+| `curl -i URL` | Include response headers and status |
+| `curl -v URL` | Verbose: DNS, connect, request, response |
+| `curl -X POST URL` | Use POST instead of GET |
+| `curl -H "Name: value"` | Add a request header |
+| `curl -d '{"text":"hi"}'` | Send a request body |
+| `curl -o file.txt URL` | Save the body to a file |
 
-## Talk to GitHub
+## Lab calls
 
-| Command | Purpose |
+```bash
+curl -i http://127.0.0.1:8080/health
+curl http://127.0.0.1:8080/notes
+curl -X POST http://127.0.0.1:8080/notes \
+  -H "Content-Type: application/json" \
+  -d '{"text": "hello"}'
+curl -i http://127.0.0.1:8080/does-not-exist
+curl -i http://127.0.0.1:8080/notes/secret
+curl -i http://127.0.0.1:8080/notes/secret -H "X-API-Key: lecture2-key"
+```
+
+## Status codes to remember
+
+| Code | Meaning |
 |---|---|
-| `git remote -v` | Show `origin` (the GitHub URL) |
-| `git remote add origin URL` | Attach GitHub the first time |
-| `git pull origin main` | Download and merge latest `main` |
-| `git fetch` | Download, but do not merge yet |
-| `git push -u origin my-feature` | Upload your branch |
+| 200 | OK |
+| 201 | Created |
+| 400 | Bad request (your JSON or URL is wrong) |
+| 401 | Not authenticated (missing/wrong key) |
+| 403 | Authenticated, but not allowed |
+| 404 | URL not found |
+| 429 | Too many requests |
+| 500 | Server error |
+| 502 | Bad gateway (proxy got a bad answer) |
+| 503 | Service unavailable |
 
-## Do not commit
+## Optional AWS
 
-`.env`, passwords, API keys, `*.pem`, `.venv/`, `node_modules/`
-
-Commit `.env.example` (fake values). Never commit `.env`.
-
-## Pull request (browser)
-
-1. Push your **branch** (not a secret).
-2. GitHub → Compare & pull request.
-3. Write what changed and why.
-4. Request a review.
-5. Merge into `main` after review.
-6. Delete the feature branch.
+```bash
+aws --version
+aws sts get-caller-identity
+```
 
 ## Not today
 
-`rebase`, `push --force`, GitHub Actions, Docker, AWS.
+Docker, Kubernetes, Terraform, GitHub Actions, `git init`.
