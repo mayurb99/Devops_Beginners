@@ -1,0 +1,174 @@
+Lecture 4 AWS lab
+One Region. One micro EC2. Stop it before you leave.
+Do NOT create: NAT Gateway, load balancer, RDS, EKS, a second EC2.
+
+
+--------------------------------------------------
+0. Region
+--------------------------------------------------
+
+Top right of the console: pick ONE Region and stay there.
+Example: Asia Pacific (Mumbai) ap-south-1
+
+Write it down: _________________
+
+
+--------------------------------------------------
+A. Billing alarm FIRST (before any server)
+--------------------------------------------------
+
+1. Search: Billing
+2. Budgets → Create budget
+3. Use a template: "Monthly cost budget"
+   Amount: 5 USD (or 1 USD if you want a tighter tripwire)
+   Email: your email
+4. Create.
+
+Optional extra: Billing preferences → Receive billing alerts.
+
+You must see a budget/alarm before you launch EC2.
+
+
+--------------------------------------------------
+B. Do not use root for daily work (IAM picture)
+--------------------------------------------------
+
+1. Search: IAM
+2. Dashboard: look at Users, Roles, Policies.
+3. If you still sign in as root, create one IAM user for class:
+   - Users → Create user
+   - Console access: yes
+   - Do NOT attach AdministratorAccess if you can avoid it.
+   - For today, a user who can use EC2, S3, and VPC is enough.
+   - Least privilege = only the actions this person needs.
+
+Root is for account setup and billing. Not for launching servers every week.
+
+
+--------------------------------------------------
+C. Network: public subnet, no NAT
+--------------------------------------------------
+
+You may use the default VPC. That is fine for this class.
+
+1. Search: VPC
+2. Your VPCs: there is usually a default VPC. Note its ID.
+3. Subnets: find one marked public (or default subnet that auto-assigns a public IP).
+4. Internet Gateways: one IGW attached to that VPC.
+
+Do NOT click "Create NAT Gateway".
+Do NOT create extra VPCs today unless the tutor asks.
+
+Picture you should be able to draw:
+
+  Internet → Internet Gateway → public subnet → EC2 (public IP)
+  Security group sits on the EC2 and allows only the ports you open.
+
+
+--------------------------------------------------
+D. Security group (lock SSH)
+--------------------------------------------------
+
+1. EC2 → Security Groups → Create
+2. Name: notes-api-sg
+3. Inbound:
+   - SSH, port 22, Source: My IP  (not 0.0.0.0/0)
+4. Outbound: leave default (allow out).
+5. Create.
+
+We do not open 8080 yet. That is for a later lecture when the app runs on the instance.
+
+
+--------------------------------------------------
+E. One micro EC2
+--------------------------------------------------
+
+1. EC2 → Instances → Launch instance
+2. Name: notes-api-micro
+3. AMI: Amazon Linux 2023
+4. Instance type: t3.micro  (or t2.micro if t3.micro is missing)
+   If the console says Free tier eligible, use that type.
+5. Key pair: create one and download the .pem  OR  use EC2 Instance Connect (no key).
+   Keep the .pem off GitHub.
+6. Network: default VPC, a public subnet, Auto-assign public IP: Enable
+7. Security group: notes-api-sg
+8. Storage: 8 GB gp3 is enough. Do not add extra disks.
+9. Launch.
+
+Wait until State = Running.
+Copy the Public IPv4 address.
+
+Optional: Connect → EC2 Instance Connect → Connect
+Then:  whoami    hostname    exit
+
+
+--------------------------------------------------
+F. Stop vs terminate (do this before you leave)
+--------------------------------------------------
+
+Stop     = the VM is off. You are not billed for CPU hours. A small disk charge can remain.
+Terminate = the VM is deleted. Public IP is gone.
+
+Today: select the instance → Instance state → Stop instance.
+
+Confirm it says Stopped.
+
+
+--------------------------------------------------
+G. S3 (a bucket, not a database)
+--------------------------------------------------
+
+1. S3 → Create bucket
+2. Name: something unique, e.g. notes-api-yourname-date
+3. Region: SAME as the EC2 Region
+4. Block all public access: ON (leave it on)
+5. Create.
+6. Upload is optional: a tiny text file is enough, then you may delete the object.
+
+S3 stores files. It is not RDS. We do not create a database today.
+
+
+--------------------------------------------------
+H. Optional AWS CLI on the laptop
+--------------------------------------------------
+
+  aws sts get-caller-identity
+  aws ec2 describe-instances --query "Reservations[].Instances[].{id:InstanceId,state:State.Name}" --output table
+  aws s3 ls
+
+If CLI is not configured, skip. The console lab is enough.
+
+
+--------------------------------------------------
+I. Name map (one minute, no console)
+--------------------------------------------------
+
+  AWS EC2          ≈  Azure Virtual Machine   ≈  GCP Compute Engine
+  AWS VPC          ≈  Azure VNet              ≈  GCP VPC
+  AWS S3           ≈  Azure Blob Storage      ≈  GCP Cloud Storage
+  AWS IAM          ≈  Azure Entra ID / RBAC   ≈  GCP IAM
+  AWS Security group ≈ Azure NSG              ≈  GCP VPC firewall rule
+
+
+--------------------------------------------------
+Do not create
+--------------------------------------------------
+
+  NAT Gateway
+  Application Load Balancer
+  RDS
+  EKS
+  A second EC2 left running
+  Unattached Elastic IP
+  Extra Regions
+
+
+--------------------------------------------------
+End of class checklist
+--------------------------------------------------
+
+  [ ] Budget / billing alarm exists
+  [ ] Instance is Stopped (or terminated if the tutor says so)
+  [ ] No NAT Gateway in the VPC console
+  [ ] .pem is not in Git
+  [ ] You wrote down the Region

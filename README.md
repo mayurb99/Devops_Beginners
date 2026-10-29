@@ -17,3 +17,17 @@ CI/CD is **GitHub Actions**, not Jenkins. There is **no Git/GitHub lecture**. Ku
 - Student-readable PowerPoint
 - Lab: run `notes-api.py`, then `curl` (Postman optional)
 - Instruction list: `lec-02/codebase/api-lab-instructions.txt`
+
+## Lecture 3 — Networking
+
+[lec-03/README.md](lec-03/README.md)
+
+- Path of a request: DNS → IP → port → TLS → HTTP
+- Lab: `lec-03/codebase/networking-lab-instructions.txt` (`curl -v`)
+
+## Lecture 4 — AWS Fundamentals
+
+[lec-04/README.md](lec-04/README.md)
+
+- Billing alarm first. One micro EC2. Stop it.
+- Lab: `lec-04/codebase/aws-lab-instructions.txt` (no NAT, no ALB, no RDS)
