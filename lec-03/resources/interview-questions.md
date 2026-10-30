@@ -52,6 +52,48 @@ Speak in your own words.
 
 ---
 
-## 9. HTTP vs HTTPS again?
+## 9. What is a VPC?
+
+**Spoken:** “A virtual private cloud: my isolated network in AWS, Azure, or GCP. I pick a CIDR like 10.0.0.0/16. Azure calls it a VNet. GCP also says VPC.”
+
+---
+
+## 10. Public subnet vs private subnet?
+
+**Spoken:** “A public subnet has a route to an Internet Gateway, so a VM can have a public IP. A private subnet has no direct internet. To call out it needs NAT, which is billed, so this course puts the one micro in a public subnet and locks the security group.”
+
+---
+
+## 11. Security group vs NACL?
+
+**Spoken:** “A security group is a firewall on the instance, stateful: allow SSH in and the reply is allowed out. A NACL is a firewall on the subnet, stateless, and we almost never design with it in this class.”
+
+---
+
+## 12. What is CIDR?
+
+**Spoken:** “A way to write a block of IPs. 10.0.0.0/16 is a big private range for the VPC. 10.0.1.0/24 is a smaller subnet inside it.”
+
+---
+
+## 13. Internet Gateway vs NAT Gateway?
+
+**Spoken:** “An Internet Gateway is the door on the VPC for a public subnet. A NAT Gateway lets a private subnet call out without being reachable in. NAT is billed, so we do not create it in this course.”
+
+---
+
+## 14. What is an Elastic IP / reserved public IP?
+
+**Spoken:** “A public IPv4 that stays yours when the VM stops. AWS calls it Elastic IP. Azure says Public IP. GCP says External IP. A spare unused one can still be billed, so we do not allocate extras.”
+
+---
+
+## 15. How do two VPCs talk, or how does an office talk to the cloud?
+
+**Spoken:** “Peering connects two VPCs or VNets privately. A VPN encrypts office or laptop traffic over the internet. Direct Connect, ExpressRoute, or Interconnect is private fibre — names only, not a lab.”
+
+---
+
+## 16. HTTP vs HTTPS again?
 
 **Spoken:** “Same HTTP messages. HTTPS wraps them in TLS so the path is encrypted. Port 443.”

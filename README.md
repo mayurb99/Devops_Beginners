@@ -23,7 +23,8 @@ CI/CD is **GitHub Actions**, not Jenkins. There is **no Git/GitHub lecture**. Ku
 [lec-03/README.md](lec-03/README.md)
 
 - Path of a request: DNS → IP → port → TLS → HTTP
-- Lab: `lec-03/codebase/networking-lab-instructions.txt` (`curl -v`)
+- Cloud network (all clouds): VPC/VNet, CIDR, subnet, IGW, NAT, security group
+- Lab: `lec-03/codebase/networking-lab-instructions.txt` (`curl -v` + draw the VPC)
 
 ## Lecture 4 — AWS Fundamentals
 

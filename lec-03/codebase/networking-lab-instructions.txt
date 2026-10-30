@@ -111,7 +111,32 @@ Cheat phrases:
 
 
 --------------------------------------------------
-H. Stop notes-api
+H. Draw the cloud network (paper, 5 minutes)
+--------------------------------------------------
+
+Draw this. Labels must match the PPT.
+
+  Internet
+     |
+  Internet Gateway
+     |
+  VPC  (example CIDR 10.0.0.0/16)
+     +-- public subnet   10.0.1.0/24   -->  one VM with a public IP
+     |                                      security group: port 22 from My IP
+     +-- private subnet  10.0.2.0/24   -->  would need NAT to reach internet
+                                            (we do NOT create NAT in this course)
+
+Write the names for the other clouds next to VPC:
+
+  AWS: VPC              Azure: VNet           GCP: VPC
+  AWS: subnet           Azure: subnet         GCP: subnet
+  AWS: security group   Azure: NSG            GCP: VPC firewall rule
+  AWS: Internet Gateway Azure: Internet      GCP: Cloud Router / internet
+  AWS: NAT Gateway      Azure: NAT Gateway    GCP: Cloud NAT
+
+
+--------------------------------------------------
+I. Stop notes-api
 --------------------------------------------------
 
 First window: Ctrl+C
@@ -121,6 +146,6 @@ First window: Ctrl+C
 Do not do today
 --------------------------------------------------
 
-  Creating a VPC, NAT Gateway, load balancer, or EC2
-  Opening 0.0.0.0/0 on SSH in AWS
+  Creating a NAT Gateway, load balancer, or EC2 (lecture 4)
+  Opening 0.0.0.0/0 on SSH
   Spending money

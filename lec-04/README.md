@@ -2,7 +2,9 @@
 
 75-minute teaching pack. Module 2: AWS and Containers.
 
-**Curriculum:** account, Region, billing alarm, IAM, VPC (public subnet only), Internet Gateway, security group, one t3.micro / t2.micro, S3, stop vs terminate.
+**Curriculum:** account, Region, billing alarm, IAM, then **click** the Lecture 3 picture on AWS: VPC (public subnet only), Internet Gateway, security group, one t3.micro / t2.micro, S3, stop vs terminate.
+
+VPC / subnet / IGW / NAT / SG theory is Lecture 3. Today is the console.
 
 **Hard rule:** billing alarm **before** the instance. Stop the instance before you leave. No NAT Gateway, no load balancer, no RDS, no second EC2, no EKS.
 

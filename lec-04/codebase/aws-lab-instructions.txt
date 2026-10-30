@@ -59,7 +59,7 @@ You may use the default VPC. That is fine for this class.
 Do NOT click "Create NAT Gateway".
 Do NOT create extra VPCs today unless the tutor asks.
 
-Picture you should be able to draw:
+Picture from Lecture 3 (click it today — do not create NAT):
 
   Internet → Internet Gateway → public subnet → EC2 (public IP)
   Security group sits on the EC2 and allows only the ports you open.

@@ -43,18 +43,19 @@ Beginner-Friendly Learning Plan
 
 - DNS, IP addresses, TCP and ports.
 - TLS and HTTP/HTTPS.
-- Load balancers, proxies, firewalls and security groups.
+- Cloud network (same picture on AWS, Azure, GCP): VPC/VNet, CIDR, subnet, route table, Internet Gateway, NAT Gateway (do not create), security group / NSG / VPC firewall, NACL, public vs Elastic IP, load balancer, cloud DNS.
+- Region vs Availability Zone (a subnet lives in one AZ on AWS).
+- Peering, VPN, Direct Connect / ExpressRoute / Interconnect — names only.
 - Connection refused vs timeout vs 403.
-- Public IP vs private IP.
-- Why this course uses a public subnet (NAT Gateway is not Free Tier friendly).
-- Practical: use curl -v and explain why a request failed.
+- Why this course uses a public subnet (NAT Gateway is billed).
+- Practical: use curl -v, then draw the VPC on paper. No AWS clicks today.
 
 ## Lecture 4: AWS Fundamentals
 *Module 2: AWS and Containers*
 
 - AWS account, Region and billing alarm.
 - IAM users, roles, policies and least-privilege access.
-- VPC, public subnet, Internet Gateway and security group. No NAT Gateway.
+- Click the Lecture 3 picture: VPC, public subnet, Internet Gateway and security group. No NAT Gateway.
 - Amazon EC2: one t3.micro or t2.micro instance. Stop vs terminate.
 - Amazon S3 as object storage.
 - Azure and GCP: same ideas, different names.

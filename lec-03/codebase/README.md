@@ -1,6 +1,6 @@
 # Lecture 3 lab
 
-See how a request travels. Break it on purpose. Name the failure.
+See how a request travels. Break it on purpose. Name the failure. Then draw the cloud VPC.
 
 Follow `networking-lab-instructions.txt`.
 
