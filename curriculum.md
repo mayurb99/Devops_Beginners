@@ -41,14 +41,12 @@ Beginner-Friendly Learning Plan
 ## Lecture 3: Networking
 *Module 1: Foundations*
 
-- DNS, IP addresses, TCP and ports.
-- TLS and HTTP/HTTPS.
-- Cloud network (same picture on AWS, Azure, GCP): VPC/VNet, CIDR, subnet, route table, Internet Gateway, NAT Gateway (do not create), security group / NSG / VPC firewall, NACL, public vs Elastic IP, load balancer, cloud DNS.
+- Beginner path only (no OSI, TCP vs UDP, frames, or routers): DNS, IP (public vs private), port, HTTPS as encrypted HTTP, refused vs timeout vs 403, ping and traceroute.
+- Cloud network (same picture on AWS, Azure, GCP): VPC/VNet, CIDR, subnet, route table, Internet Gateway, NAT Gateway (do not create), security group / NSG / VPC firewall, NACL, public vs Elastic IP, VPC endpoints / PrivateLink, flow logs, WAF, load balancer, cloud DNS.
 - Region vs Availability Zone (a subnet lives in one AZ on AWS).
 - Peering, VPN, Direct Connect / ExpressRoute / Interconnect — names only.
-- Connection refused vs timeout vs 403.
 - Why this course uses a public subnet (NAT Gateway is billed).
-- Practical: use curl -v, then draw the VPC on paper. No AWS clicks today.
+- No required lab. Lecture 4 is the AWS clicks.
 
 ## Lecture 4: AWS Fundamentals
 *Module 2: AWS and Containers*

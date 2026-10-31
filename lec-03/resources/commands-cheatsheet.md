@@ -1,89 +1,67 @@
-# Lecture 3 command cheat sheet
+# Lecture 3 cheat sheet
 
-## See the path of a request
+There is no required lab. These are names and examples from the PowerPoint.
+
+## Path of a URL
+
+DNS (name → IP) → that computer → a port (door) → HTTP.
+
+If the URL is `https://`, the path is encrypted. Same HTTP as lecture 2.
+
+404 means HTTP started. “Could not resolve host” means DNS failed. Connection refused means the port is closed.
+
+## Words you need
+
+| Word | Meaning | Example |
+|---|---|---|
+| DNS | Name → IP | example.com → 93.184.216.34 |
+| IP | Address of a computer | `127.0.0.1` is this laptop |
+| Private IP | Only inside the network / VPC | `10.0.1.25`, `192.168.1.10` |
+| Public IP | Reachable from the internet | EC2 public IPv4 in lecture 4 |
+| Port | Door on that IP | 22 SSH, 80 HTTP, 443 HTTPS, 8080 class API |
+| `0.0.0.0/0` | The whole internet | Never open SSH to it |
+
+## Failure names
+
+| What you see | HTTP started? |
+|---|---|
+| Could not resolve host | No — DNS |
+| Connection refused | No — nothing on that port |
+| Timed out | No — drop / dead / blocked |
+| 401 / 403 / 404 / 5xx | Yes |
+
+ping = “does this IP answer?” (often blocked in cloud). traceroute / `tracert` = which stop went quiet.
+
+## Cloud network (same picture, different names)
+
+CIDR examples: VPC `10.0.0.0/16` (the house), subnet `10.0.1.0/24` (one room). Public vs private is the **route**, not the number.
+
+| Idea | AWS | Azure | GCP |
+|---|---|---|---|
+| Isolated network | VPC | VNet | VPC |
+| Slice | Subnet | Subnet | Subnet |
+| Door in | Internet Gateway | Internet | Internet gateway |
+| Private outbound | NAT Gateway (billed) | NAT Gateway | Cloud NAT |
+| Firewall on VM | Security group | NSG | VPC firewall |
+| Firewall on subnet | NACL | NACL-like | Firewall policies |
+| Sticky public IP | Elastic IP | Public IP | External IP |
+| Cloud DNS | Route 53 | Azure DNS | Cloud DNS |
+| Load balancer | ALB / NLB | LB / App Gateway | Cloud Load Balancing |
+| Private path to a service | VPC endpoint / PrivateLink | Private Endpoint | Private Service Connect |
+| Packet diary | VPC Flow Logs | NSG flow logs | VPC Flow Logs |
+| HTTP-layer firewall | AWS WAF | Azure WAF | Cloud Armor |
+
+Public subnet = route to Internet Gateway. Private subnet = needs NAT to call out. **We do not create NAT.**
+
+AWS: one subnet lives in one Availability Zone.
+
+Security group is the firewall on the VM (this course). NACL is on the subnet (name only). WAF reads HTTP; security group only sees IP and port.
+
+## Optional commands (home only)
 
 ```bash
 curl -v http://127.0.0.1:8080/health
 curl -v --max-time 15 https://example.com
+ping 8.8.8.8
+tracert example.com
 ```
-
-`-v` = verbose. Read DNS, connect, TLS, then HTTP.
-
-## Failure demos
-
-```bash
-curl -v --max-time 5 http://127.0.0.1:9          # refused
-curl -v --max-time 5 http://192.0.2.1:80         # timeout
-curl -i --max-time 15 https://httpbin.org/status/403   # HTTP 403
-```
-
-## Optional DNS lookup
-
-```bash
-nslookup example.com
-```
-
-## Cloud network (same picture, different names)
-
-| Idea | Meaning | AWS | Azure | GCP |
-|---|---|---|---|---|
-| Your private cloud network | Isolated IP space | VPC | Virtual Network (VNet) | VPC |
-| Slice of that network | Where VMs live | Subnet | Subnet | Subnet |
-| Address block | Size of the network | CIDR e.g. 10.0.0.0/16 | CIDR | CIDR |
-| Who can leave to the internet | Route to a gateway | Route table | Route table | Routes |
-| Door to the internet | Public subnet path | Internet Gateway | Internet | Internet gateway / default internet |
-| Private subnet → internet | Outbound only | NAT Gateway (billed) | NAT Gateway | Cloud NAT |
-| Firewall on the VM | Allow/deny ports | Security group | NSG | VPC firewall |
-| Firewall on the subnet | Extra layer | NACL | NACL-like / Azure Firewall | Firewall policies |
-| Sticky public IP | IP that does not change | Elastic IP | Public IP | External IP |
-| One door, many VMs | Spread traffic | ALB / NLB | Load Balancer / App Gateway | Cloud Load Balancing |
-| DNS in the cloud | Name → IP | Route 53 | Azure DNS | Cloud DNS |
-| Two networks talk | Private link between VPCs | VPC peering | VNet peering | VPC peering |
-| Office → cloud | Encrypted over internet | Site-to-Site VPN | VPN Gateway | Cloud VPN |
-| Private fibre | Not a lab | Direct Connect | ExpressRoute | Cloud Interconnect |
-| Hub for many VPCs | Skip for beginners | Transit Gateway | Virtual WAN | Network Connectivity Center |
-
-Public subnet = route to the Internet Gateway. VM can have a public IP.  
-Private subnet = no direct internet. Needs NAT to call out. **We do not create NAT in this course.**
-
-AWS: one subnet lives in one Availability Zone. Azure subnet is in the VNet. GCP VPC can be global; subnet is regional.
-
-`0.0.0.0/0` means the whole internet. Never open SSH to it.
-
-CIDR examples: VPC `10.0.0.0/16`, public subnet `10.0.1.0/24`, private subnet `10.0.2.0/24`.
-
-## Names to remember
-
-| Word | Meaning |
-|---|---|
-| DNS | Name → IP |
-| IP | Address of a computer on a network |
-| Port | Door on that computer (80 HTTP, 443 HTTPS, 8080 class API, 22 SSH) |
-| TCP | Reliable connection to a port |
-| TLS | Encryption around HTTP (HTTPS) |
-| Public IP | Reachable from the internet |
-| Private IP | Only inside the network (10.x, 172.16–31.x, 192.168.x, 127.0.0.1) |
-| Security group | AWS firewall on an instance or ENI: allow/deny ports |
-| Firewall | Same idea, not only AWS |
-| Load balancer | One public door in front of many servers |
-| Proxy | A hop in the middle (forward or reverse) |
-| NAT Gateway | Lets private subnets reach the internet. **Costs money. We do not create it.** |
-| CIDR | A block of IPs. `/16` is the VPC. `/24` is a subnet. |
-| Route table | Next hop: local, Internet Gateway, or NAT |
-| NACL | Stateless firewall on the subnet. Know the name. |
-| Elastic IP | Sticky public IPv4. Do not leave a spare allocated. |
-| Peering / VPN | Two networks, or office to cloud. Names only. |
-
-## Failure table
-
-| What you see | HTTP started? | Typical cause |
-|---|---|---|
-| Connection refused | No | Nothing listening on that port |
-| Timed out | No | Dropped / filtered / dead IP |
-| 403 | Yes | Authenticated or not, not allowed |
-| 404 | Yes | Wrong path |
-| 401 | Yes | Missing or wrong key (lecture 2) |
-
-## Not today
-
-Creating NAT, a load balancer, or EC2 (lecture 4). Docker, Kubernetes.

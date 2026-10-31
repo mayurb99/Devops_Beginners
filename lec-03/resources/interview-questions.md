@@ -1,99 +1,87 @@
 # Lecture 3 interview questions
 
-Speak in your own words.
+Speak in your own words. No lab is required.
 
 ---
 
 ## 1. What happens after you type a URL?
 
-**Spoken:** “DNS turns the name into an IP. TCP connects to a port. If it is HTTPS, TLS encrypts. Then HTTP: method, path, headers, body. I read the status code.”
+**Spoken:** “DNS turns the name into an IP. Then that computer, then a port, then HTTP. If it is HTTPS, the path is encrypted. I read the status code.”
 
 ---
 
 ## 2. What is DNS?
 
-**Spoken:** “Domain Name System. It maps example.com to an IP address so humans do not memorise numbers.”
+**Spoken:** “The phone book. example.com becomes a number. If DNS fails I never reach HTTP — that is not a 404.”
 
 ---
 
-## 3. What is a port?
+## 3. What is an IP? Public vs private?
 
-**Spoken:** “A numbered door on an IP. 443 is HTTPS. 22 is SSH. 8080 is our class API. Two programs on one machine use different ports.”
-
----
-
-## 4. Connection refused vs timeout vs 403?
-
-**Spoken:** “Refused: the IP answered, nothing is listening on that port. Timeout: no answer, often a firewall drop. 403: HTTP worked, the server said you are not allowed.”
+**Spoken:** “An IP is the address of a computer. 127.0.0.1 is this laptop. A public IP can be reached from the internet. A private IP (10.x or 192.168.x) stays inside the home network or the VPC.”
 
 ---
 
-## 5. Public IP vs private IP?
+## 4. What is a port?
 
-**Spoken:** “A public IP can be reached from the internet. A private IP is only inside a VPC or a home network. 127.0.0.1 is this laptop.”
-
----
-
-## 6. What is a security group?
-
-**Spoken:** “AWS’s firewall on a resource. It allows or denies ports. If SSH is closed, I get timeout or refuse, not an SSH prompt.”
+**Spoken:** “A numbered door on an IP. 443 is HTTPS. 22 is SSH. 8080 was our class API. A security group decides which doors are allowed.”
 
 ---
 
-## 7. Load balancer vs reverse proxy vs firewall?
+## 5. Connection refused vs timeout vs 403?
 
-**Spoken:** “A load balancer spreads traffic across servers. A reverse proxy sits in front and forwards. A firewall allows or blocks. They can be separate products or one box doing more than one job.”
-
----
-
-## 8. Why does this course use a public subnet?
-
-**Spoken:** “A private subnet needs a NAT Gateway to reach the internet. NAT is billed. For Free Tier we put one micro EC2 in a public subnet with a public IP, and lock the security group.”
+**Spoken:** “Refused: the IP answered, nothing is listening on that port. Timeout: no answer, often a firewall. 403: HTTP worked, the server said you are not allowed.”
 
 ---
 
-## 9. What is a VPC?
+## 6. ping vs traceroute?
 
-**Spoken:** “A virtual private cloud: my isolated network in AWS, Azure, or GCP. I pick a CIDR like 10.0.0.0/16. Azure calls it a VNet. GCP also says VPC.”
-
----
-
-## 10. Public subnet vs private subnet?
-
-**Spoken:** “A public subnet has a route to an Internet Gateway, so a VM can have a public IP. A private subnet has no direct internet. To call out it needs NAT, which is billed, so this course puts the one micro in a public subnet and locks the security group.”
+**Spoken:** “ping asks if an IP answers. Many clouds block ping, so a failed ping is not proof the app is down. traceroute lists stops on the path; stars mean that stop did not reply.”
 
 ---
 
-## 11. Security group vs NACL?
+## 7. What is a VPC? What is CIDR?
 
-**Spoken:** “A security group is a firewall on the instance, stateful: allow SSH in and the reply is allowed out. A NACL is a firewall on the subnet, stateless, and we almost never design with it in this class.”
-
----
-
-## 12. What is CIDR?
-
-**Spoken:** “A way to write a block of IPs. 10.0.0.0/16 is a big private range for the VPC. 10.0.1.0/24 is a smaller subnet inside it.”
+**Spoken:** “A virtual private cloud: my isolated network. Azure calls it a VNet. CIDR is how we write a block of IPs: 10.0.0.0/16 is the VPC, 10.0.1.0/24 is a subnet inside it.”
 
 ---
 
-## 13. Internet Gateway vs NAT Gateway?
+## 8. Public subnet vs private subnet?
 
-**Spoken:** “An Internet Gateway is the door on the VPC for a public subnet. A NAT Gateway lets a private subnet call out without being reachable in. NAT is billed, so we do not create it in this course.”
-
----
-
-## 14. What is an Elastic IP / reserved public IP?
-
-**Spoken:** “A public IPv4 that stays yours when the VM stops. AWS calls it Elastic IP. Azure says Public IP. GCP says External IP. A spare unused one can still be billed, so we do not allocate extras.”
+**Spoken:** “Public vs private is the route, not the number. Public has a path to an Internet Gateway so a VM can have a public IP. Private has no direct internet; to call out it needs NAT, which is billed, so this course puts one micro in a public subnet and locks the security group.”
 
 ---
 
-## 15. How do two VPCs talk, or how does an office talk to the cloud?
+## 9. Internet Gateway vs NAT Gateway?
 
-**Spoken:** “Peering connects two VPCs or VNets privately. A VPN encrypts office or laptop traffic over the internet. Direct Connect, ExpressRoute, or Interconnect is private fibre — names only, not a lab.”
+**Spoken:** “IGW is the door on the VPC for a public subnet. NAT lets a private subnet call out without being reachable in. NAT is billed, so we do not create it.”
 
 ---
 
-## 16. HTTP vs HTTPS again?
+## 10. Security group vs NACL vs WAF?
 
-**Spoken:** “Same HTTP messages. HTTPS wraps them in TLS so the path is encrypted. Port 443.”
+**Spoken:** “A security group is a firewall on the instance: IP and port. A NACL is a firewall on the subnet. A WAF reads the HTTP and blocks attacks like SQL injection. In class we design the security group.”
+
+---
+
+## 11. What is PrivateLink / a VPC endpoint?
+
+**Spoken:** “A private path from my VPC to a cloud service, without the public internet.”
+
+---
+
+## 12. What are VPC flow logs?
+
+**Spoken:** “A diary of accepted and rejected packets. I read them when SSH times out and I suspect a security group. We do not turn them on in class.”
+
+---
+
+## 13. How do two VPCs talk, or an office talk to the cloud?
+
+**Spoken:** “Peering connects two VPCs privately. A VPN encrypts office or laptop traffic over the internet. Direct Connect, ExpressRoute, or Interconnect is private fibre — names only.”
+
+---
+
+## 14. Firewall vs reverse proxy vs load balancer?
+
+**Spoken:** “A firewall allows or blocks a port. A reverse proxy sits in front and forwards. A load balancer spreads traffic across healthy servers.”

@@ -1,151 +1,56 @@
-Lecture 3 networking lab
-Goal: use curl -v and say WHY a request failed.
-No AWS console. No new Python app.
+Lecture 3 — OPTIONAL practice (not required in class)
+The PowerPoint already shows these examples. Skip this file unless you want to try.
+
+No AWS console. Do not create NAT, a load balancer, or EC2.
 
 
 --------------------------------------------------
-A. Start notes-api (leave this window open)
+A. Optional: a working local call (needs lecture 2 notes-api)
 --------------------------------------------------
 
   cd lec-02/codebase/notes-api
   python notes-api.py
 
-You should see: API is running at http://127.0.0.1:8080
-
-Open a SECOND terminal for the rest.
-
-
---------------------------------------------------
-B. A working call (this is HTTP, no DNS)
---------------------------------------------------
+Second window:
 
   curl -v http://127.0.0.1:8080/health
 
-Look for:
-
-  Trying 127.0.0.1:8080
-  Connected to 127.0.0.1
-  GET /health
-  HTTP ... 200
-
-127.0.0.1 is this laptop. There is no DNS lookup for it.
+Look for Connected, then HTTP 200. 127.0.0.1 skips DNS.
 
 
 --------------------------------------------------
-C. DNS then HTTPS (the internet)
+B. Optional: DNS then HTTPS
 --------------------------------------------------
 
   curl -v --max-time 15 https://example.com
 
-Look for, in order:
-
-  1) Resolving example.com  (DNS: name -> IP)
-  2) Trying <an IP>:443     (TCP to port 443)
-  3) SSL / TLS handshake    (HTTPS)
-  4) GET /                  (HTTP)
-  5) HTTP ... 200
-
-If DNS fails, you never reach TLS. Write down which line you saw first.
+Look for: resolve host, port 443, SSL, then HTTP.
 
 
 --------------------------------------------------
-D. Connection refused (nothing is listening)
+C. Optional: failure names
 --------------------------------------------------
 
-  curl -v --max-time 5 http://127.0.0.1:9
-
-Port 9 is almost never used. You should see:
-
-  Connection refused
-
-Meaning: the IP was reachable. No program is listening on that port.
-This is NOT 404. HTTP never started.
+  curl -v --max-time 5 http://127.0.0.1:9          # refused
+  curl -v --max-time 5 http://192.0.2.1:80         # timeout
+  curl -i --max-time 15 https://httpbin.org/status/403   # HTTP 403
 
 
 --------------------------------------------------
-E. Timeout (packets disappear)
+D. Optional: ping and traceroute
 --------------------------------------------------
 
-  curl -v --max-time 5 http://192.0.2.1:80
+  ping 8.8.8.8
+  tracert example.com          # Windows
+  traceroute example.com       # Git Bash / Mac / Linux
 
-192.0.2.1 is a documentation address. It should not answer.
-
-You should see curl wait, then:
-
-  Connection timed out
-  or  Operation timed out
-
-Meaning: no reply. Could be a firewall dropping packets, or a dead route.
-Different from refused: refused is a fast "no". Timeout is silence.
+A failed ping does not always mean the site is down (ICMP is often blocked).
 
 
 --------------------------------------------------
-F. 403 (HTTP worked; you are not allowed)
+Do not do
 --------------------------------------------------
 
-  curl -i --max-time 15 https://httpbin.org/status/403
-
-You should see HTTP 403.
-
-Meaning: TCP and TLS worked. The server understood you and said no.
-This is NOT connection refused.
-
-
---------------------------------------------------
-G. Say it out loud (fill this in)
---------------------------------------------------
-
-  Working notes-api:     ______________________________
-  example.com HTTPS:     ______________________________
-  Port 9:                ______________________________
-  192.0.2.1:             ______________________________
-  httpbin 403:           ______________________________
-
-Cheat phrases:
-
-  200         = HTTP worked
-  403         = HTTP worked, not allowed
-  404         = HTTP worked, path is wrong  (lecture 2)
-  refused     = nothing listening on that port
-  timeout     = no answer (often a firewall or a dead IP)
-
-
---------------------------------------------------
-H. Draw the cloud network (paper, 5 minutes)
---------------------------------------------------
-
-Draw this. Labels must match the PPT.
-
-  Internet
-     |
-  Internet Gateway
-     |
-  VPC  (example CIDR 10.0.0.0/16)
-     +-- public subnet   10.0.1.0/24   -->  one VM with a public IP
-     |                                      security group: port 22 from My IP
-     +-- private subnet  10.0.2.0/24   -->  would need NAT to reach internet
-                                            (we do NOT create NAT in this course)
-
-Write the names for the other clouds next to VPC:
-
-  AWS: VPC              Azure: VNet           GCP: VPC
-  AWS: subnet           Azure: subnet         GCP: subnet
-  AWS: security group   Azure: NSG            GCP: VPC firewall rule
-  AWS: Internet Gateway Azure: Internet      GCP: Cloud Router / internet
-  AWS: NAT Gateway      Azure: NAT Gateway    GCP: Cloud NAT
-
-
---------------------------------------------------
-I. Stop notes-api
---------------------------------------------------
-
-First window: Ctrl+C
-
-
---------------------------------------------------
-Do not do today
---------------------------------------------------
-
-  Creating a NAT Gateway, load balancer, or EC2 (lecture 4)
+  Creating a NAT Gateway, load balancer, or EC2
   Opening 0.0.0.0/0 on SSH
   Spending money
