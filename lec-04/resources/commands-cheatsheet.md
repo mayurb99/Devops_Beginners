@@ -1,55 +1,58 @@
-# Lecture 4 command cheat sheet
+# Lecture 4 cheat sheet
 
-Console first. CLI is optional.
+No CLI is required. These are names from the PowerPoint and the lab.
 
-## Stay in one Region
+## Create today (AWS)
 
-Example: `ap-south-1`
+| Thing | Lab section | Remember |
+|---|---|---|
+| Budget | A | Before NAT and ALB |
+| VPC `10.0.0.0/16` | C | One Region |
+| Public / private subnet | C | Public = route to IGW |
+| NACL | D | We keep allow-all |
+| `sg-hello` / `sg-private` / `sg-alb` | E | SSH = My IP only |
+| hello-a, hello-b | F–H | User data is the hello page |
+| Elastic IP | I | Release in cleanup |
+| private-nat-test | J | No public IP |
+| NAT Gateway | K | Public subnet; delete same day |
+| ALB + target group | L | http:// DNS name; delete same day |
+| S3 bucket | M | Block public access ON |
+| Lambda + S3 trigger | N | Deploy, then upload, then logs |
 
-## Optional AWS CLI
+## Use cases
 
-```bash
-aws sts get-caller-identity
-aws ec2 describe-instances --output table
-aws ec2 stop-instances --instance-ids i-xxxxxxxx
-aws s3 ls
-aws s3 mb s3://your-unique-bucket-name
-```
-
-Configure once (not in Git):
-
-```bash
-aws configure
-```
-
-## Free Tier box we use
-
-| Create | Do not create |
+| You do | You should see |
 |---|---|
-| Billing budget / alarm | NAT Gateway |
-| IAM user (not daily root) | Load balancer |
-| Default VPC, public subnet, IGW | RDS |
-| One t3.micro / t2.micro | EKS / extra EC2 |
-| Security group, SSH from My IP | 0.0.0.0/0 on SSH |
-| Private S3 bucket | Public bucket |
+| Connect before SSH rule | Fail |
+| Add 22 from My IP | Shell works |
+| Stop/start without EIP | Public IP changes |
+| Stop/start with EIP | Public IP stays |
+| curl from private VM before NAT | Timeout |
+| curl after NAT + route | HTTP 200 |
+| Refresh ALB URL | APP-A and APP-B |
+| Stop hello-b | Only APP-A |
+| Upload to S3 | Lambda log has the file name |
 
-## Stop vs terminate
-
-| Action | Instance | Disk | Public IP |
-|---|---|---|---|
-| Stop | Off, can start again | Kept (small charge) | Usually released |
-| Terminate | Deleted | Deleted (unless you set keep) | Gone |
-
-## Azure / GCP names
+## Three clouds — names (Different in italics)
 
 | Idea | AWS | Azure | GCP |
 |---|---|---|---|
-| Virtual machine | EC2 | Virtual Machine | Compute Engine |
-| Network | VPC | Virtual Network | VPC |
+| Network | VPC, *subnet = one AZ* | VNet, *subnet can span AZs* | *VPC can be global*, subnet regional |
+| VM | EC2 | Virtual Machine | Compute Engine |
+| Function | Lambda | Functions | Cloud Functions (*Cloud Run* is common too) |
 | Object files | S3 | Blob Storage | Cloud Storage |
-| Who can do what | IAM | Entra ID / RBAC | IAM |
-| Firewall on the VM | Security group | Network Security Group | VPC firewall |
+| Disk on one VM | EBS | Managed Disk | Persistent Disk |
+| Shared files | EFS | Azure Files | Filestore |
+| Managed SQL | RDS | Azure SQL | Cloud SQL |
+| VM firewall | Security group | NSG (*NIC or subnet*) | VPC firewall (*on the VPC*) |
+| HTTP LB | ALB | Application Gateway | Cloud Load Balancing |
+| Sticky IP | Elastic IP | Public IP | Reserved External IP |
+| Identity | IAM user/role | *Entra ID* + RBAC | *Google account* + service account |
 
-## Not today
+## Later lectures
 
-Docker, Kubernetes, Terraform apply, GitHub Actions, opening port 8080.
+Fargate / ECS → Docker lectures. EKS → Kubernetes lectures (class uses **kind**, not EKS).
+
+## Cleanup order
+
+ALB → NAT → release Elastic IPs → terminate/stop EC2 → Connect endpoint → Lambda → empty S3.

@@ -1,174 +1,614 @@
-Lecture 4 AWS lab
-One Region. One micro EC2. Stop it before you leave.
-Do NOT create: NAT Gateway, load balancer, RDS, EKS, a second EC2.
+Lecture 4 — AWS console lab (buttons only, no CLI)
+Read one section, click it, tick the checkbox, then go on.
+A complete beginner can follow this without the tutor.
+
+You will BUILD: VPC, two subnets, Internet Gateway, NAT Gateway,
+security groups, NACL, two public EC2 (hello-world A and B),
+one private EC2, Application Load Balancer, Elastic IP, S3, Lambda.
+
+You will NOT build: RDS, EFS, EKS, Fargate, Azure, GCP.
+Those are theory on the PowerPoint. Fargate is a later Docker lecture.
+EKS is a later Kubernetes lecture.
+
+PICK ONE REGION AND STAY THERE. Example: Asia Pacific (Mumbai) ap-south-1
+Write it here: _______________________________
+
+
+MONEY — read this before any create button
+------------------------------------------
+NAT Gateway and Application Load Balancer are billed by the hour
+even if nobody uses them. Two extra EC2 micros use Free Tier hours.
+
+At the END of class you MUST run section Z (cleanup):
+  delete the load balancer, delete the NAT Gateway, release Elastic IPs,
+  terminate the three instances (or stop them if the tutor says stop).
+
+If you leave NAT or the load balancer overnight, you get a bill.
+
+
+What you should have at the end (the picture)
+---------------------------------------------
+
+  Internet
+     |
+  Application Load Balancer  (port 80)
+     |                    \
+  hello-a                 hello-b     public subnet 10.0.1.0/24
+     |
+  Internet Gateway
+     |
+  VPC  10.0.0.0/16
+     +-- public  10.0.1.0/24  --  IGW, NAT, ALB, hello-a, hello-b
+     +-- private 10.0.2.0/24  --  private-nat-test (no public IP)
+            first: no path to internet
+            then:  0.0.0.0/0 --> NAT Gateway  --> internet works
 
 
 --------------------------------------------------
-0. Region
+0. Sign in and lock the Region
 --------------------------------------------------
 
-Top right of the console: pick ONE Region and stay there.
-Example: Asia Pacific (Mumbai) ap-south-1
-
-Write it down: _________________
+1. Open https://console.aws.amazon.com
+2. Top right: click the Region name.
+3. Choose ONE Region. Do not change it again today.
+4. If the console looks empty, you are in the wrong Region.
 
 
 --------------------------------------------------
 A. Billing alarm FIRST (before any server)
 --------------------------------------------------
 
-1. Search: Billing
-2. Budgets → Create budget
-3. Use a template: "Monthly cost budget"
-   Amount: 5 USD (or 1 USD if you want a tighter tripwire)
-   Email: your email
-4. Create.
+1. Search bar at the top: type  Billing  and open Billing and Cost Management.
+2. Left menu: Budgets.
+3. Create budget.
+4. Use a template: Monthly cost budget.
+5. Amount: 5 USD (or 1 USD).
+6. Email: your email.
+7. Create budget.
 
-Optional extra: Billing preferences → Receive billing alerts.
+You must see a budget on the Budgets page before you continue.
 
-You must see a budget/alarm before you launch EC2.
+  [ ] Budget exists
 
 
 --------------------------------------------------
-B. Do not use root for daily work (IAM picture)
+B. IAM — look, then do not use root for the rest if you can
 --------------------------------------------------
 
 1. Search: IAM
-2. Dashboard: look at Users, Roles, Policies.
-3. If you still sign in as root, create one IAM user for class:
-   - Users → Create user
-   - Console access: yes
-   - Do NOT attach AdministratorAccess if you can avoid it.
-   - For today, a user who can use EC2, S3, and VPC is enough.
-   - Least privilege = only the actions this person needs.
+2. Dashboard: note Users, Roles, Policies.
+3. If you are signed in as root (the email of the account):
+   Users → Create user
+   - User name: class-student
+   - Provide user access to the AWS Management Console: yes
+   - Attach policies later or attach a learning policy that can use
+     VPC, EC2, S3, Lambda, IAM read.
+   - Least privilege = only what this person needs. Not AdministratorAccess
+     if the tutor can give you a narrower policy.
+4. Root is for billing and break-glass. Not for launching servers every week.
 
-Root is for account setup and billing. Not for launching servers every week.
+  [ ] I know I am root or I am the class IAM user
 
 
 --------------------------------------------------
-C. Network: public subnet, no NAT
+C. Create the VPC and two subnets
 --------------------------------------------------
-
-You may use the default VPC. That is fine for this class.
 
 1. Search: VPC
-2. Your VPCs: there is usually a default VPC. Note its ID.
-3. Subnets: find one marked public (or default subnet that auto-assigns a public IP).
-4. Internet Gateways: one IGW attached to that VPC.
+2. Left: Your VPCs → Create VPC
+3. Choose VPC and more  (this wizard builds the doors for you; we will
+   still CHECK and then ADD NAT ourselves)
+   OR choose VPC only if you want every click yourself (steps C2).
 
-Do NOT click "Create NAT Gateway".
-Do NOT create extra VPCs today unless the tutor asks.
+   Easier path for beginners — VPC and more:
+   - Name tag: notes-net
+   - IPv4 CIDR: 10.0.0.0/16
+   - Number of Availability Zones: 2
+     (ALB later refuses to create with only one AZ)
+   - Number of public subnets: 2
+   - Number of private subnets: 1
+   - NAT gateways: None   <-- we create NAT later on purpose
+   - VPC endpoints: None
+   - Enable DNS hostnames: yes
+   - Create VPC
 
-Picture from Lecture 3 (click it today — do not create NAT):
+4. Wait until the wizard finishes. Open the VPC notes-net.
+   Write the VPC ID:  _______________________________
 
-  Internet → Internet Gateway → public subnet → EC2 (public IP)
-  Security group sits on the EC2 and allows only the ports you open.
+5. Left: Subnets
+   You should see three subnets. Rename them if the names are ugly:
+   - public-a and public-b (two AZs) — Auto-assign public IPv4: Enable on BOTH
+     Subnet → Actions → Edit subnet settings → Enable auto-assign public IPv4 → Save
+   - private — Auto-assign public IP: leave OFF
+
+   Public subnet A:    _______________________________
+   Public subnet B:    _______________________________
+   Private subnet ID:  _______________________________
+
+   Already created a VPC with only one public subnet? Do this before section L:
+   VPC → Subnets → Create subnet
+   - VPC: notes-net
+   - AZ: a DIFFERENT one (e.g. us-east-1b if the first public is in us-east-1a)
+   - CIDR: a free slice, e.g. 10.0.16.0/20  (must not overlap 10.0.0.0/20)
+   - Create
+   Then: Subnet → Actions → Edit subnet settings → Enable auto-assign public IPv4
+   Then: Route tables → the PUBLIC table (the one with 0.0.0.0/0 → IGW)
+         Subnet associations → tick this new subnet → Save
+   You now have two public subnets. The VMs can stay in the first AZ.
+
+6. Left: Internet gateways
+   One IGW should be Attached to notes-net.
+   If you used VPC only and there is no IGW:
+   Create internet gateway → name notes-igw → Actions → Attach to VPC notes-net
+
+7. Left: Route tables
+   Find the route table for the PUBLIC subnet.
+   Routes should include:
+     10.0.0.0/16     local
+     0.0.0.0/0       Internet Gateway
+   That is what makes the subnet public.
+
+   Find the route table for the PRIVATE subnet.
+   Routes should include:
+     10.0.0.0/16     local
+   There must be NO 0.0.0.0/0 yet. That is the point of the NAT use case.
+
+  [ ] VPC + public subnet + private subnet + IGW
+  [ ] Private route table has no internet route yet
 
 
 --------------------------------------------------
-D. Security group (lock SSH)
+D. NACL (subnet firewall) — create, keep it open
 --------------------------------------------------
 
-1. EC2 → Security Groups → Create
-2. Name: notes-api-sg
-3. Inbound:
-   - SSH, port 22, Source: My IP  (not 0.0.0.0/0)
-4. Outbound: leave default (allow out).
-5. Create.
+A NACL sits on the subnet. The default NACL already allows everything.
+We create one so you have seen the screen. Do not deny SSH unless
+the tutor is watching — it is easy to lock yourself out.
 
-We do not open 8080 yet. That is for a later lecture when the app runs on the instance.
+1. VPC → Network ACLs → Create network ACL
+   Name: notes-nacl
+   VPC: notes-net
+   Create
+
+2. Select notes-nacl → Inbound rules → Edit inbound rules → Add rule
+   Rule 100, All traffic, Allow, Source 0.0.0.0/0 → Save
+3. Outbound rules → same: Rule 100, All traffic, Allow, 0.0.0.0/0 → Save
+4. Subnet associations → Edit → tick the public and private subnets → Save
+
+  [ ] NACL created and associated (allow all)
 
 
 --------------------------------------------------
-E. One micro EC2
+E. Security groups (firewall on each machine)
+--------------------------------------------------
+
+1. EC2 → Security Groups → Create security group
+
+   Name: sg-hello
+   VPC: notes-net
+   Inbound rules — add ONLY this for now (no SSH yet — that is a use case):
+     HTTP    TCP    80    Source 0.0.0.0/0     (the load balancer and browsers)
+   Outbound: leave default (all out).
+   Create.
+
+   We add SSH in section G after you have seen SSH fail.
+
+2. Create another security group
+
+   Name: sg-private
+   VPC: notes-net
+   Inbound:
+     SSH    TCP    22    Source  10.0.0.0/16
+     (so a helper in this VPC can reach it; the internet still cannot)
+   Outbound: default.
+   Create.
+
+
+  [ ] Two security groups exist
+
+
+--------------------------------------------------
+F. Launch hello-a  (first compute — SSH is still closed)
 --------------------------------------------------
 
 1. EC2 → Instances → Launch instance
-2. Name: notes-api-micro
+2. Name: hello-a
 3. AMI: Amazon Linux 2023
-4. Instance type: t3.micro  (or t2.micro if t3.micro is missing)
-   If the console says Free tier eligible, use that type.
-5. Key pair: create one and download the .pem  OR  use EC2 Instance Connect (no key).
-   Keep the .pem off GitHub.
-6. Network: default VPC, a public subnet, Auto-assign public IP: Enable
-7. Security group: notes-api-sg
-8. Storage: 8 GB gp3 is enough. Do not add extra disks.
-9. Launch.
+4. Instance type: t3.micro  (or t2.micro if the console says Free tier eligible)
+5. Key pair: Create new key pair
+   Name: notes-class
+   Type: RSA    Format: .pem
+   Create and download. Keep this file OFF GitHub.
+   (You can also skip the key and use EC2 Instance Connect later, after SSH is open.)
+6. Network:
+   VPC: notes-net
+   Subnet: the PUBLIC subnet
+   Auto-assign public IP: Enable
+   Security group: sg-hello   (HTTP only — no SSH yet)
+7. Scroll to Advanced details → User data — paste exactly:
 
-Wait until State = Running.
-Copy the Public IPv4 address.
+#!/bin/bash
+mkdir -p /var/www
+echo "<h1>Hello from APP-A</h1><p>hostname: $(hostname)</p>" > /var/www/index.html
+cd /var/www && python3 -m http.server 80
 
-Optional: Connect → EC2 Instance Connect → Connect
-Then:  whoami    hostname    exit
+8. Storage: 8 GB is enough. Launch.
 
+9. Wait until Instance state = Running and Status check = 2/2 or at least Running.
+   Copy Public IPv4:  _______________________________
 
---------------------------------------------------
-F. Stop vs terminate (do this before you leave)
---------------------------------------------------
+USE CASE — without the SSH firewall rule, SSH fails
+10. Select hello-a → Connect
+    Try EC2 Instance Connect → Connect
+    You should get an error (or it hangs). SSH is not allowed on sg-hello yet.
+    That is the use case. Do not panic.
 
-Stop     = the VM is off. You are not billed for CPU hours. A small disk charge can remain.
-Terminate = the VM is deleted. Public IP is gone.
-
-Today: select the instance → Instance state → Stop instance.
-
-Confirm it says Stopped.
-
-
---------------------------------------------------
-G. S3 (a bucket, not a database)
---------------------------------------------------
-
-1. S3 → Create bucket
-2. Name: something unique, e.g. notes-api-yourname-date
-3. Region: SAME as the EC2 Region
-4. Block all public access: ON (leave it on)
-5. Create.
-6. Upload is optional: a tiny text file is enough, then you may delete the object.
-
-S3 stores files. It is not RDS. We do not create a database today.
+  [ ] hello-a running, HTTP user-data set, SSH failed (expected)
 
 
 --------------------------------------------------
-H. Optional AWS CLI on the laptop
+G. Open SSH from My IP — then SSH works
 --------------------------------------------------
 
-  aws sts get-caller-identity
-  aws ec2 describe-instances --query "Reservations[].Instances[].{id:InstanceId,state:State.Name}" --output table
-  aws s3 ls
+"My IP" is YOUR laptop/home address. That is enough for SSH with the .pem file.
 
-If CLI is not configured, skip. The console lab is enough.
+The orange Connect → EC2 Instance Connect button in the BROWSER does NOT
+come from your IP. It comes from AWS. If you only add My IP, that button
+still fails. That is expected. Use A or B below. Do NOT open 0.0.0.0/0 on 22.
+
+1. EC2 → Security Groups → sg-hello → Edit inbound rules → Add rule
+   Type: SSH
+   Port: 22
+   Source: My IP
+   Save rules
+
+2. Pick one way in:
+
+   A. From your laptop (matches the My IP rule)
+
+      Git Bash, in the folder where you saved notes-class.pem:
+
+        ssh -i notes-class.pem ec2-user@PUBLIC_IPV4
+
+      (Windows PowerShell:  ssh -i notes-class.pem ec2-user@PUBLIC_IPV4)
+
+   B. Browser Instance Connect (extra rule required)
+
+      Edit inbound rules again → Add rule
+        Type: SSH
+        Source: Prefix list
+        Choose:  com.amazonaws.REGION.ec2-instance-connect
+        Example Mumbai:  com.amazonaws.ap-south-1.ec2-instance-connect
+        Example Virginia: com.amazonaws.us-east-1.ec2-instance-connect
+      Save.
+      Then Instances → hello-a → Connect → EC2 Instance Connect → Connect.
+
+3. In the shell type:
+   hostname
+   curl -s http://127.0.0.1
+   You should see Hello from APP-A
+   exit
+
+USE CASE — never leave SSH open to the world
+4. You should see 22 from My IP (and maybe the Instance Connect prefix list).
+   You should NOT see 0.0.0.0/0 on port 22.
+
+  [ ] SSH works after the My IP rule
+  [ ] I did not set SSH to 0.0.0.0/0
 
 
 --------------------------------------------------
-I. Name map (one minute, no console)
+H. Launch hello-b  (second compute — same public subnet)
 --------------------------------------------------
 
-  AWS EC2          ≈  Azure Virtual Machine   ≈  GCP Compute Engine
-  AWS VPC          ≈  Azure VNet              ≈  GCP VPC
-  AWS S3           ≈  Azure Blob Storage      ≈  GCP Cloud Storage
-  AWS IAM          ≈  Azure Entra ID / RBAC   ≈  GCP IAM
-  AWS Security group ≈ Azure NSG              ≈  GCP VPC firewall rule
+Same as hello-a, but:
+
+1. Name: hello-b
+2. Same AMI, same micro, same key, PUBLIC subnet, sg-hello
+   (sg-hello now has SSH + HTTP — both apps share it)
+3. User data — APP-B not APP-A:
+
+#!/bin/bash
+mkdir -p /var/www
+echo "<h1>Hello from APP-B</h1><p>hostname: $(hostname)</p>" > /var/www/index.html
+cd /var/www && python3 -m http.server 80
+
+4. Launch. Wait Running.
+   Public IPv4 of hello-b:  _______________________________
+
+5. Optional: in a browser (or the console “open address” is not needed):
+   You can test each VM by IP later. The load balancer is the public door.
+
+  [ ] hello-b running with Hello from APP-B
 
 
 --------------------------------------------------
-Do not create
+I. Elastic IP vs ordinary public IP
 --------------------------------------------------
 
-  NAT Gateway
-  Application Load Balancer
-  RDS
-  EKS
-  A second EC2 left running
-  Unattached Elastic IP
-  Extra Regions
+Ordinary public IP (what hello-a has now):
+1. Write hello-a Public IPv4 again:  _______________________________
+2. Select hello-a → Instance state → Stop instance → Stop
+3. Wait Stopped.
+4. Instance state → Start instance
+5. Wait Running. Look at Public IPv4.
+   It is almost always a NEW number.
+   That is the use case: stop/start throws the ordinary public IP away.
+
+Elastic IP (sticky):
+6. EC2 → Elastic IPs → Allocate Elastic IP address → Allocate
+7. Select the new address → Actions → Associate Elastic IP address
+   Instance: hello-a    Private IP: the one shown    Associate
+8. Write the Elastic IP:  _______________________________
+9. Stop hello-a, then Start it again.
+10. Public IPv4 should still be THAT Elastic IP.
+
+Leave the Elastic IP associated with hello-a for the rest of class.
+We release it in cleanup so it does not sit unused (unused EIPs are billed).
+
+  [ ] I saw the ordinary IP change after stop/start
+  [ ] I saw the Elastic IP stay after stop/start
 
 
 --------------------------------------------------
-End of class checklist
+J. Private instance — internet is NOT possible yet
 --------------------------------------------------
 
-  [ ] Budget / billing alarm exists
-  [ ] Instance is Stopped (or terminated if the tutor says so)
-  [ ] No NAT Gateway in the VPC console
-  [ ] .pem is not in Git
-  [ ] You wrote down the Region
+1. Launch instance
+   Name: private-nat-test
+   AMI: Amazon Linux 2023
+   Type: t3.micro or t2.micro
+   Same key
+   VPC: notes-net
+   Subnet: the PRIVATE subnet
+   Auto-assign public IP: Disable
+   Security group: sg-private
+   No user data needed.
+   Launch.
+
+2. Open the instance.
+   Public IPv4 should be  blank / –
+   You cannot reach this machine from your home internet. That is correct.
+
+3. Select it → Connect → EC2 Instance Connect
+   It should fail (no public IP, no Instance Connect Endpoint yet).
+
+4. We need a door from the console into the private subnet.
+   EC2 → Load Balancing is later. For connect:
+   Left menu (EC2): Network & Security → EC2 Instance Connect Endpoints
+   (or VPC → Endpoints → Create endpoint → type EC2 Instance Connect Endpoint)
+
+   Create endpoint:
+   - VPC: notes-net
+   - Security group: create or pick one that allows SSH (port 22) from My IP
+     on the ENDPOINT, and make sure sg-private allows SSH from this endpoint
+     or from 10.0.0.0/16 (already set).
+   - Subnet: the PRIVATE subnet is fine
+   - Create. Wait Available.
+
+5. Instances → private-nat-test → Connect
+   Choose EC2 Instance Connect (now via the endpoint) → Connect
+   You should get a shell.
+
+6. In that shell, prove there is NO internet yet:
+
+   curl -I --max-time 8 https://example.com
+
+   You should see a hang, then timeout or “Could not connect” / “Network is unreachable”.
+   That is the use case. The private subnet has no 0.0.0.0/0 route.
+
+   Leave this window. Do not create NAT until you have seen the failure.
+
+  [ ] private-nat-test has no public IP
+  [ ] curl to example.com FAILED (expected)
+
+
+--------------------------------------------------
+K. Create NAT Gateway — then the private VM can go out
+--------------------------------------------------
+
+NAT is billed. Create it only after the failure in J. Delete it in section Z.
+
+1. VPC → NAT gateways → Create NAT gateway
+   Name: notes-nat
+   Subnet: the PUBLIC subnet   (NAT must sit in public)
+   Elastic IP: Allocate Elastic IP  (the wizard can do this)
+   Create NAT gateway
+   Wait until State = Available  (can take a few minutes)
+
+2. VPC → Route tables → the PRIVATE subnet’s route table → Routes → Edit routes
+   Add route:
+     Destination  0.0.0.0/0
+     Target       NAT Gateway   (pick notes-nat)
+   Save.
+
+3. Go back to the private-nat-test shell (Connect again if it dropped).
+   Wait 30 seconds, then:
+
+   curl -I --max-time 15 https://example.com
+
+   You should see HTTP/2 200 or HTTP/1.1 200.
+   Outbound internet now works. Inbound from the internet still does not
+   (still no public IP). That is what NAT is for.
+
+  [ ] NAT Available
+  [ ] Private route 0.0.0.0/0 → NAT
+  [ ] curl to example.com SUCCEEDED
+
+
+--------------------------------------------------
+L. Application Load Balancer — two hello apps, see who answers
+--------------------------------------------------
+
+The load balancer is billed. Delete it in section Z the same day.
+
+1. EC2 → Target groups → Create target group
+   Type: Instances
+   Name: hello-tg
+   Protocol: HTTP    Port: 80
+   VPC: notes-net
+   Health check path: /
+   Next
+   Register hello-a and hello-b (tick both) → Include as pending → Create
+
+2. EC2 → Load Balancers → Create load balancer
+   Application Load Balancer → Create
+   Name: hello-alb
+   Scheme: Internet-facing
+   IP address type: IPv4
+   VPC: notes-net
+   Availability Zones: tick TWO AZs and their PUBLIC subnets
+     AWS will not create an internet-facing ALB with only one subnet.
+     Error "At least two subnets must be specified" = you ticked one AZ.
+     If you only have one public subnet, create a second one (end of section C).
+   Security groups: you MUST pick sg-hello .
+     The wizard stays blocked if it says "A security group is not specified."
+   Listeners: HTTP : 80  → Forward to hello-tg
+   Create load balancer
+   Wait State = Active  (a few minutes)
+
+3. Copy the DNS name of the load balancer
+   (looks like  hello-alb-….elb.amazonaws.com)
+   Write it:  _______________________________
+
+4. Open a browser. Paste that DNS name (http:// not https://).
+
+USE CASE — where did the request go?
+5. Refresh the page 10 times.
+   You should see Hello from APP-A on some refreshes and Hello from APP-B
+   on others. The hostname line is different. That is the load balancer
+   choosing a healthy instance.
+
+6. EC2 → Stop hello-b. Wait Stopped.
+   Refresh the ALB URL several times.
+   You should see only APP-A. The target group shows hello-b unhealthy.
+   Start hello-b again if you want both back.
+
+  [ ] Browser shows A and B on refresh
+  [ ] After stopping B, only A answers
+
+
+--------------------------------------------------
+M. S3 — the only storage we create
+--------------------------------------------------
+
+EBS (the disk on EC2) already exists; we do not add extra disks.
+EFS and Glacier are theory only.
+
+1. Search: S3 → Create bucket
+2. Name: notes-lab-YOURNAME-DATE   (must be unique in the world)
+   Example: notes-lab-mayur-20261101
+3. Region: SAME Region as everything else
+4. Block all public access: ON  (leave every tick)
+5. Create bucket
+
+Write the bucket name:  _______________________________
+
+6. Open the bucket → Upload → a tiny text file (hello.txt) → Upload
+   This file is also the trigger for Lambda in the next section.
+   You may wait to upload until Lambda is ready, or upload a second file there.
+
+  [ ] Private S3 bucket exists
+
+
+--------------------------------------------------
+N. Lambda + S3 trigger
+--------------------------------------------------
+
+1. Search: Lambda → Create function
+   Name: notes-s3-logger
+   Runtime: Python 3.12  (or the Python the console offers)
+   Architecture: x86_64
+   Create function
+
+2. In the code box, replace the sample with:
+
+import json
+
+def lambda_handler(event, context):
+    print("S3 event:")
+    print(json.dumps(event))
+    for rec in event.get("Records", []):
+        b = rec["s3"]["bucket"]["name"]
+        k = rec["s3"]["object"]["key"]
+        print("Uploaded:", b, k)
+    return {"ok": True}
+
+3. Deploy  (orange button). Do not skip Deploy.
+
+4. Configuration → Permissions → click the role name
+   This opens IAM. Add a permission if the wizard did not:
+   the role needs CloudWatch Logs (usually already there).
+
+5. Back to the Lambda function → Add trigger
+   Source: S3
+   Bucket: the bucket from section M
+   Event type: All object create events
+   Acknowledge the recursive warning → Add
+   If the console asks to add a resource-based policy, allow it.
+
+6. S3 → your bucket → Upload a new file, e.g. trigger-me.txt → Upload
+
+7. Lambda → Monitor → View CloudWatch logs
+   Open the newest log stream.
+   You should see a line:  Uploaded:  your-bucket  trigger-me.txt
+
+That is the use case: a file landing in S3 woke a function. No server to stop.
+
+  [ ] Lambda deployed
+  [ ] S3 trigger added
+  [ ] Log line shows the file name
+
+
+--------------------------------------------------
+O. Extra checks (do these if you have time)
+--------------------------------------------------
+
+Wrong Region
+1. Top right, switch to another Region for 10 seconds.
+2. EC2 instance list looks empty. Your VPC “vanished”.
+3. Switch BACK to the Region you wrote in section 0.
+
+Stop vs terminate (on a spare thought, not on all three yet)
+- Stop = off, disk remains, you can Start.
+- Terminate = deleted. Do this in cleanup, not now.
+
+NACL deny (tutor only)
+- If the tutor asks: inbound NACL add Rule 90 deny TCP 22 from 0.0.0.0/0
+- SSH dies even though sg-hello allows 22.
+- Delete that deny rule immediately after the demo.
+
+
+--------------------------------------------------
+Z. Cleanup — do this before you leave
+--------------------------------------------------
+
+Order matters. Delete the load balancer and NAT first (they cost the most).
+
+1. EC2 → Load Balancers → hello-alb → Actions → Delete
+   Also delete target group hello-tg
+2. VPC → NAT gateways → notes-nat → Delete
+   Wait until it disappears (can take several minutes).
+   Then EC2 → Elastic IPs → release BOTH leftover addresses
+   (the NAT EIP and the hello-a EIP).
+   An Elastic IP that is allocated and not attached is billed.
+3. EC2 → Instances → hello-a, hello-b, private-nat-test
+   Instance state → Terminate  (or Stop if the tutor wants to reuse tomorrow)
+4. EC2 → Instance Connect Endpoints → delete the endpoint you created
+5. Lambda → notes-s3-logger → Delete
+6. S3 → empty the bucket (all objects) → Delete bucket
+7. Optional same day: delete sg-hello, sg-private, sg-alb, notes-nacl,
+   then the subnets and VPC notes-net.
+   If Terminate is still running, wait before deleting the VPC.
+8. VPC console: confirm there is NO NAT Gateway and NO unused Elastic IP.
+
+  [ ] ALB gone
+  [ ] NAT gone
+  [ ] Elastic IPs released
+  [ ] Instances stopped or terminated
+  [ ] Lambda deleted
+  [ ] S3 emptied / deleted
+  [ ] Budget still exists (keep that)
+
+End of lab.
+Do the assignment file next: lec-04/assignment.md

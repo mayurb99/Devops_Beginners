@@ -29,5 +29,6 @@ CI/CD is **GitHub Actions**, not Jenkins. There is **no Git/GitHub lecture**. Ku
 
 [lec-04/README.md](lec-04/README.md)
 
-- Billing alarm first. One micro EC2. Stop it.
-- Lab: `lec-04/codebase/aws-lab-instructions.txt` (no NAT, no ALB, no RDS)
+- Three-cloud theory. AWS console demo (VPC, NAT, two hellos + ALB, S3, Lambda).
+- Lab: `lec-04/codebase/aws-lab-instructions.txt` · Assignment: `lec-04/assignment.md`
+- Delete NAT and the load balancer the same day.

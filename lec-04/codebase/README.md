@@ -1,11 +1,10 @@
 # Lecture 4 lab
 
-Do this in the AWS console. Stop or delete what you create before you leave.
+AWS Management Console only. No CLI.
 
-Follow `aws-lab-instructions.txt`.
+1. Open `aws-lab-instructions.txt` and go section by section.
+2. Tick the checkboxes.
+3. Do **section Z (cleanup)** before you leave.
+4. Fill `../assignment.md`.
 
-You need:
-
-- An AWS account (Free Tier / credits)
-- A browser
-- Optional: AWS CLI on the laptop (`aws sts get-caller-identity`)
+Need: an AWS account, a browser, one Region written down.

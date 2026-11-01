@@ -51,13 +51,10 @@ Beginner-Friendly Learning Plan
 ## Lecture 4: AWS Fundamentals
 *Module 2: AWS and Containers*
 
-- AWS account, Region and billing alarm.
-- IAM users, roles, policies and least-privilege access.
-- Click the Lecture 3 picture: VPC, public subnet, Internet Gateway and security group. No NAT Gateway.
-- Amazon EC2: one t3.micro or t2.micro instance. Stop vs terminate.
-- Amazon S3 as object storage.
-- Azure and GCP: same ideas, different names.
-- Practical: create a billing alarm, launch one micro instance, then stop it.
+- Short theory on AWS, Azure and GCP (slides mark where a cloud is different).
+- Demo (AWS console, buttons only): custom VPC, public and private subnet, IGW, NACL, security groups, NAT Gateway (after proving no internet), two hello-world EC2s behind an ALB, Elastic IP vs ordinary public IP, SSH closed then 22 from My IP, S3, Lambda with S3 trigger.
+- Storage created: S3 only. Database, EFS, extra EBS: theory. Fargate in Docker lectures. EKS in Kubernetes lectures (class uses kind).
+- Practical: follow lec-04/codebase/aws-lab-instructions.txt, then assignment.md. Delete NAT and the ALB the same day.
 
 ## Lecture 5: Docker
 *Module 2: AWS and Containers*

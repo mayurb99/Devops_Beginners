@@ -4,60 +4,72 @@ Speak in your own words. Do not claim production AWS if you only ran this lab.
 
 ---
 
-## 1. What is a Region?
+## 1. Why a budget before NAT and a load balancer?
 
-**Spoken:** “A geographic cluster of AWS data centres. I pick one and stay there so I do not pay for extra copies of resources.”
-
----
-
-## 2. Why a billing alarm first?
-
-**Spoken:** “So I know before the bill surprises me. I create a budget, then I launch the instance, then I stop it.”
+**Spoken:** “Both are billed by the hour even if idle. The budget email is cheaper than a surprise.”
 
 ---
 
-## 3. IAM user vs role vs policy?
+## 2. IAM user vs role vs policy?
 
-**Spoken:** “A user is a person or a long-lived login. A role is credentials a service or person assumes temporarily. A policy is the JSON that says allow or deny actions. Least privilege means the policy is only as wide as the job.”
-
----
-
-## 4. What is a VPC?
-
-**Spoken:** “My private network in AWS. Subnets live inside it. An Internet Gateway lets a public subnet reach the internet.”
+**Spoken:** “A user is a person login. A role is temporary identity a service assumes. A policy says allow or deny. Azure uses Entra ID and RBAC. GCP uses Google accounts and service accounts — there is no IAM user copy of AWS.”
 
 ---
 
-## 5. Why no NAT Gateway in this course?
+## 3. Why is an AWS subnet different from Azure and GCP?
 
-**Spoken:** “NAT lets private subnets reach the internet and it is billed by the hour plus data. For Free Tier we use one public subnet and lock the security group.”
-
----
-
-## 6. Security group vs NACLs?
-
-**Spoken:** “I talk about security groups: stateful allow rules on the instance. NACLs are subnet-level and exist, but I do not design with them in this class.”
+**Spoken:** “In AWS one subnet lives in one Availability Zone. In Azure a subnet can span AZs. In GCP the VPC can be global and the subnet is regional.”
 
 ---
 
-## 7. Stop vs terminate?
+## 4. Security group vs NACL?
 
-**Spoken:** “Stop turns the VM off; I can start it later; disk can still cost a little. Terminate deletes the VM.”
-
----
-
-## 8. What is S3?
-
-**Spoken:** “Object storage for files. Not a database. Buckets are private unless I deliberately open them. I never should for this course.”
+**Spoken:** “A security group is on the VM and remembers the conversation. A NACL is on the subnet and does not. I showed SSH fail with no port 22, then work after 22 from My IP.”
 
 ---
 
-## 9. EC2 vs Lambda vs Kubernetes in one line?
+## 5. Ordinary public IP vs Elastic IP?
 
-**Spoken:** “EC2 is a VM I manage. Lambda is a short function AWS runs. Kubernetes is a cluster scheduler. This course’s cloud deploy is one small EC2. Kubernetes we practise on a laptop.”
+**Spoken:** “Stop and start: the ordinary public IP usually changes. An Elastic IP stays. If I allocate one and leave it unused, it can still be billed. Azure says Public IP. GCP says reserved External IP.”
 
 ---
 
-## 10. Same idea on Azure / GCP?
+## 6. What did NAT prove?
 
-**Spoken:** “EC2 is a VM, S3 is object storage, VPC is the network, IAM is who can do what. Names change. The picture does not.”
+**Spoken:** “The private VM had no public IP and curl to example.com failed. After a NAT Gateway in the public subnet and a 0.0.0.0/0 route, curl worked. The internet still cannot SSH in — NAT is outbound only.”
+
+---
+
+## 7. Why must NAT sit in the public subnet?
+
+**Spoken:** “NAT needs a path to the Internet Gateway. Private instances only point at NAT. They never get a public IP.”
+
+---
+
+## 8. What did the load balancer prove?
+
+**Spoken:** “One URL, two hello apps on two EC2s. Refresh showed APP-A or APP-B. When I stopped B, only A answered — the target was unhealthy.”
+
+---
+
+## 9. S3 vs EBS vs EFS? What did you create?
+
+**Spoken:** “S3 is a bucket of files. EBS is the disk on one VM. EFS is a shared file system. I created S3 only.”
+
+---
+
+## 10. What is Lambda with an S3 trigger?
+
+**Spoken:** “A function. I uploaded a file; the log showed the bucket and key. There is no EC2 to stop. Azure Functions and GCP Cloud Functions are the same idea. GCP also pushes Cloud Run.”
+
+---
+
+## 11. Where are Fargate and EKS in this course?
+
+**Spoken:** “Fargate in the Docker lectures. EKS is named in Kubernetes; this class uses kind so we do not pay for a control plane.”
+
+---
+
+## 12. RDS?
+
+**Spoken:** “Managed SQL. Azure SQL, GCP Cloud SQL. We did not create it — easy to forget and pay. notes-api keeps notes in memory.”
