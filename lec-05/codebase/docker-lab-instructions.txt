@@ -292,6 +292,12 @@ exec is not a second SSH into EC2. It is “run this one command in that contain
 
   [ ] ps, logs, and exec all worked
 
+EXTRA --- IF you want to go insde the container
+
+sudo docker exec -it notes-l5 sh
+ls /app
+hostname
+exit
 
 --------------------------------------------------
 F. Port mapping (the door)
@@ -318,35 +324,82 @@ Ctrl+C the container. Run the usual mapping again:
 
 
 --------------------------------------------------
-G. Environment variables
+G. Environment variables  (PORT must match the RIGHT side of -p)
 --------------------------------------------------
 
-Ctrl+C the container.
+-e PORT=… sets the door INSIDE the container (the Python app).
+That number must be the RIGHT side of -p. You still curl the LEFT side
+on the EC2.
+
+If the name notes-l5 is already in use:
+
+  sudo docker rm -f notes-l5
+
+
+Step 1 — match (default, should work)
+-------------------------------------
+
+Window 1: Ctrl+C if a container is in the foreground.
 
   sudo docker run --rm -p 8080:8080 -e PORT=8080 --name notes-l5 notes-api:l5
 
-Still works (8080 is the default).
+Logs should say:  API is running at http://0.0.0.0:8080
 
-Now a breaking demo — app on 9090 inside, but we mapped host 8080 to container 8080:
+Window 2:
 
-  Ctrl+C
+  curl http://127.0.0.1:8080/health
+
+You should see {"status": "ok"}.
+Left 8080 (EC2) → right 8080 (app). App is on 8080. They match.
+
+
+Step 2 — break it on purpose
+----------------------------
+
+Window 1: Ctrl+C.
+
   sudo docker run --rm -p 8080:8080 -e PORT=9090 --name notes-l5 notes-api:l5
 
-Logs say it is listening on 9090. curl http://127.0.0.1:8080/health fails.
-The map must match the door the app actually opened.
+Logs should say:  API is running at http://0.0.0.0:9090
+The app opened 9090 INSIDE. -p still forwards to 8080 INSIDE. Wrong door.
 
-Fix: map host 8080 to container 9090:
+Window 2:
 
-  Ctrl+C
+  curl http://127.0.0.1:8080/health
+
+This should FAIL (connection refused, or hang then fail).
+You curled the EC2’s 8080. Docker sent that to container 8080.
+Nothing is listening on 8080 inside — Python is on 9090.
+
+
+Step 3 — fix the map
+--------------------
+
+Window 1: Ctrl+C.
+
   sudo docker run --rm -p 8080:9090 -e PORT=9090 --name notes-l5 notes-api:l5
+                                      ^^^^        ^^^^
+                                      LEFT        RIGHT = same as PORT
 
-  curl http://127.0.0.1:8080/health     # works again
+Logs should say:  API is running at http://0.0.0.0:9090
 
-Ctrl+C. Back to defaults:
+Window 2:
+
+  curl http://127.0.0.1:8080/health
+
+{"status": "ok"} again.
+You still curl 8080 on the EC2 (LEFT).
+Docker now sends that to 9090 inside (RIGHT), where the app is.
+
+
+Step 4 — back to class default
+------------------------------
+
+Window 1: Ctrl+C.
 
   sudo docker run --rm -p 8080:8080 --name notes-l5 notes-api:l5
 
-  [ ] I saw a mismatch fail, then a matching map work
+  [ ] Step 2 failed, step 3 worked
 
 
 --------------------------------------------------
