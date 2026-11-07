@@ -6,6 +6,8 @@ Module 2: AWS and Containers.
 
 **Demo (long, AWS console, buttons only):** follow `codebase/aws-lab-instructions.txt`. No CLI.
 
+**Architecture (PNG, AWS logos):** `resources/lecture-4-architecture.png` — the picture of what class built.
+
 **Assignment:** `assignment.md` — use cases you must have seen, three-cloud table, cleanup required.
 
 Lecture 3 already explained VPC / subnet / IGW / NAT / SG. Today we **create** them and **test** the use cases.
@@ -39,6 +41,8 @@ lec-04/
 │   ├── README.md
 │   └── aws-lab-instructions.txt
 └── resources/
+    ├── lecture-4-architecture.png
+    ├── generate-architecture.py
     ├── commands-cheatsheet.md
     └── interview-questions.md
 ```
