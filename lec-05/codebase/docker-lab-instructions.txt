@@ -1,0 +1,458 @@
+Lecture 5 — Docker lab
+Docker runs on Amazon Linux EC2. Windows has no Docker Desktop.
+The console starts the Linux computer. Git Bash is only for SSH after that.
+
+Need on Windows: a browser (AWS console), Git Bash, the same Region as lecture 4.
+You package notes-api. You do not rewrite the Python.
+
+CLI-0 to CLI-3 = console buttons. No aws commands.
+CLI-4 onward = Git Bash ssh / scp, then sudo docker on the EC2.
+
+
+--------------------------------------------------
+Where each step runs
+--------------------------------------------------
+
+  Browser (AWS console)  =  key pair, security group, Launch instance   (CLI-0 to CLI-3)
+  Windows Git Bash       =  chmod, ssh, scp                            (CLI-4, CLI-5)
+  EC2 (after ssh)        =  sudo docker …  and  curl
+
+Open TWO Git Bash windows on Windows. You will ssh into the SAME instance twice
+(one for docker run in the foreground, one for curl / ps / exec).
+
+
+--------------------------------------------------
+CLI-0. Sign in and lock the Region  (console)
+--------------------------------------------------
+
+1. Open https://console.aws.amazon.com
+2. Top right: click the Region name.
+3. Choose the SAME Region as lecture 4. Do not change it again today.
+   Write it here: _______________________________
+4. If the console looks empty, you are in the wrong Region.
+
+  [ ] I am in the Region I wrote down
+
+
+--------------------------------------------------
+CLI-1. SSH key  (console, once)
+--------------------------------------------------
+
+1. Search bar: EC2  →  open EC2
+2. Left menu: Network & Security → Key Pairs
+3. Create key pair
+   Name: lec05-docker
+   Key pair type: RSA
+   Private key file format: .pem
+4. Create key pair
+   The browser downloads lec05-docker.pem. Keep it OFF GitHub.
+
+If a key named lec05-docker already exists: do not create another.
+You still need the .pem file on this computer. If you lost it, delete
+the key pair in the console and create it again (a new download).
+
+5. Move the file to your home folder so the path has no spaces.
+   Git Bash:
+
+     mv /c/Users/mayur_brijwani/Downloads/lec05-docker.pem ~/lec05-docker.pem
+     chmod 400 ~/lec05-docker.pem
+
+   If Downloads is a different folder, cd there first, then mv.
+
+  [ ] ~/lec05-docker.pem exists
+
+
+--------------------------------------------------
+CLI-2. Security group — SSH from this computer only  (console)
+--------------------------------------------------
+
+1. EC2 → Network & Security → Security Groups
+2. Create security group
+   Name: lec05-docker-ssh
+   Description: Lecture 5 SSH only
+   VPC: the Default VPC  (not lecture 4’s custom VPC)
+3. Inbound rules → Add rule
+   Type: SSH
+   Port: 22
+   Source: My IP
+4. Do NOT add a rule for 8080. You curl on the EC2 itself.
+5. Create security group
+
+If lec05-docker-ssh already exists, open it. Inbound must be SSH / 22 / My IP only.
+If you changed wifi or used a phone hotspot, My IP changed — edit the rule.
+
+  [ ] SG allows 22 from My IP. 8080 is not open.
+
+
+--------------------------------------------------
+CLI-3. Launch one Amazon Linux 2023 micro  (console)
+--------------------------------------------------
+
+1. EC2 → Instances → Launch instance
+2. Name: lec05-docker
+3. AMI: Amazon Linux 2023
+4. Instance type: t3.micro
+   (If the console says pick Free tier eligible, t2.micro is fine.)
+5. Key pair: lec05-docker   (the one you just downloaded)
+   Do not proceed without a key. You need it for SSH in CLI-4.
+6. Network settings → Edit
+   VPC: Default VPC
+   Subnet: a default subnet (any AZ is fine)
+   Auto-assign public IP: Enable
+   Firewall: Select existing security group
+   Security groups: lec05-docker-ssh   (only this one)
+7. Storage: 8 GB is enough. No user data.
+8. Launch instance
+
+9. Click the instance id. Wait until:
+   Instance state = Running
+   Status check = 2/2   (can take 1–3 minutes)
+   Do not ssh before 2/2.
+
+10. Copy Public IPv4 address:
+    PUBLIC = _______________________________
+
+If Public IPv4 is empty: Auto-assign public IP was off, or you picked
+lecture 4’s private subnet. Terminate this instance. Launch again in the
+Default VPC with Auto-assign public IP Enable.
+
+This micro is practice. Terminate it at Demo K. Lecture 11 is the project EC2.
+
+  [ ] Running, 2/2, PUBLIC is an IP
+
+
+--------------------------------------------------
+CLI-4. SSH twice, then install Docker
+--------------------------------------------------
+
+Use the Public IPv4 you copied in CLI-3. Replace $PUBLIC with that IP.
+
+Window 1:
+
+  ssh -i ~/lec05-docker.pem -o StrictHostKeyChecking=accept-new ec2-user@$PUBLIC
+
+Window 2 (same command, same IP):
+
+  ssh -i ~/lec05-docker.pem -o StrictHostKeyChecking=accept-new ec2-user@$PUBLIC
+
+If ssh times out: SG is not My IP (phone hotspot vs wifi), or status-ok is not done.
+This is CLI SSH from your house. Security group “My IP” is correct.
+Browser Instance Connect is a different source (lecture 4 prefix list). Do not use the browser today.
+
+On the EC2 (window 1):
+
+  sudo dnf install -y docker
+  sudo systemctl enable --now docker
+  sudo docker version
+
+You must see Client AND Server. We use sudo docker so you do not need to log out.
+
+  [ ] sudo docker version shows Server
+
+
+--------------------------------------------------
+CLI-5. Put notes-api on the EC2
+--------------------------------------------------
+
+Pick ONE: git clone on the EC2 (A), or scp from Windows (B).
+A needs lec-05 on GitHub. If clone has no lec-05 folder, use B.
+
+
+A. git clone  (on the EC2, window 1 — no extra Windows window)
+
+  sudo dnf install -y git
+  git clone https://github.com/mayurb99/Devops_Beginners.git
+  cp -r ~/Devops_Beginners/lec-05/codebase/notes-api ~/notes-api
+
+If ls ~/Devops_Beginners shows no lec-05, Lecture 5 is not pushed yet. Use B.
+
+
+B. scp  (third Git Bash on Windows — not ssh)
+
+  cd "/c/Users/mayur_brijwani/Desktop/New folder (2)/Devops_Beginners/lec-05/codebase"
+  scp -i ~/lec05-docker.pem -o StrictHostKeyChecking=accept-new -r notes-api ec2-user@$PUBLIC:~/
+
+If the folder path is different on your PC, cd to wherever notes-api lives.
+
+
+Then, on EC2 window 1 (after A or B):
+
+  ls ~/notes-api
+  cat ~/notes-api/Dockerfile
+
+You should see notes-api.py, Dockerfile, .dockerignore.
+Read the Dockerfile. Do not invent a new one.
+
+  [ ] files are on the EC2
+
+
+--------------------------------------------------
+0. Port 8080 on the EC2
+--------------------------------------------------
+
+This is a new computer. Lecture 2 on Windows does not use this port.
+Still check:
+
+  curl http://127.0.0.1:8080/health
+
+This should fail (connection refused). Good.
+
+
+--------------------------------------------------
+A. Docker is alive
+--------------------------------------------------
+
+Already done in CLI-4. Repeat if you like:
+
+  sudo docker version
+  sudo docker info
+
+  [ ] Server is there
+
+
+--------------------------------------------------
+B. Go to the API folder
+--------------------------------------------------
+
+  cd ~/notes-api
+
+List files. You should see:
+
+  notes-api.py
+  Dockerfile
+  .dockerignore
+
+
+--------------------------------------------------
+C. Build the image
+--------------------------------------------------
+
+  sudo docker build -t notes-api:l5 .
+
+The dot means "this folder".
+-t = tag (name:version). notes-api is the name. l5 is the tag.
+
+First build downloads python:3.12-slim. That can take a few minutes.
+You should see Step 1, Step 2, … and "Successfully tagged notes-api:l5"
+
+  sudo docker images
+
+Look for notes-api    l5
+
+  [ ] Image notes-api:l5 exists
+
+
+--------------------------------------------------
+D. Run the container and call /health
+--------------------------------------------------
+
+Window 1 (EC2):
+
+  sudo docker run --rm -p 8080:8080 --name notes-l5 notes-api:l5
+
+Leave this window open. You should see:
+  API is running at http://0.0.0.0:8080
+
+Window 2 (second SSH, same EC2):
+
+  curl http://127.0.0.1:8080/health
+
+You should see: {"status": "ok"}
+
+-p left  8080 = door on THIS EC2 (the host)
+-p right 8080 = door INSIDE the container
+You curl the host. You are sitting on the host, so 127.0.0.1 is the EC2, not Windows.
+
+  curl http://127.0.0.1:8080/notes
+
+Do not curl the EC2 public IP from Windows. Port 8080 is not open in the security group.
+
+  [ ] /health returns 200 from the container
+
+
+--------------------------------------------------
+E. What is running — ps, logs, exec
+--------------------------------------------------
+
+Window 2:
+
+  sudo docker ps
+
+You should see notes-l5, port 0.0.0.0:8080->8080/tcp.
+
+  sudo docker logs notes-l5
+
+You should see the "API is running" lines, and the curl requests.
+
+  sudo docker exec -it notes-l5 hostname
+  sudo docker exec -it notes-l5 ls /app
+
+hostname is NOT the EC2 name (ec2-…). ls should show notes-api.py.
+exec is not a second SSH into EC2. It is “run this one command in that container.”
+
+  [ ] ps, logs, and exec all worked
+
+
+--------------------------------------------------
+F. Port mapping (the door)
+--------------------------------------------------
+
+-p 8080:8080 means:
+  left  8080 = door on the HOST (this EC2)
+  right 8080 = door INSIDE the container (the Python app)
+
+Window 1: Ctrl+C.
+
+  sudo docker run --rm -p 9090:8080 --name notes-l5 notes-api:l5
+
+Window 2:
+
+  curl http://127.0.0.1:9090/health     # works
+  curl http://127.0.0.1:8080/health     # fails — nothing on host 8080 now
+
+Ctrl+C the container. Run the usual mapping again:
+
+  sudo docker run --rm -p 8080:8080 --name notes-l5 notes-api:l5
+
+  [ ] I saw 9090 work and 8080 fail when mapped that way
+
+
+--------------------------------------------------
+G. Environment variables
+--------------------------------------------------
+
+Ctrl+C the container.
+
+  sudo docker run --rm -p 8080:8080 -e PORT=8080 --name notes-l5 notes-api:l5
+
+Still works (8080 is the default).
+
+Now a breaking demo — app on 9090 inside, but we mapped host 8080 to container 8080:
+
+  Ctrl+C
+  sudo docker run --rm -p 8080:8080 -e PORT=9090 --name notes-l5 notes-api:l5
+
+Logs say it is listening on 9090. curl http://127.0.0.1:8080/health fails.
+The map must match the door the app actually opened.
+
+Fix: map host 8080 to container 9090:
+
+  Ctrl+C
+  sudo docker run --rm -p 8080:9090 -e PORT=9090 --name notes-l5 notes-api:l5
+
+  curl http://127.0.0.1:8080/health     # works again
+
+Ctrl+C. Back to defaults:
+
+  sudo docker run --rm -p 8080:8080 --name notes-l5 notes-api:l5
+
+  [ ] I saw a mismatch fail, then a matching map work
+
+
+--------------------------------------------------
+H. Volume (a folder that outlives the container)
+--------------------------------------------------
+
+Notes live in memory. A volume does not magically save them unless the app writes files.
+Today we only prove the mount exists.
+
+Ctrl+C.
+
+  sudo docker run --rm -p 8080:8080 -v notes-data:/data --name notes-l5 notes-api:l5
+
+Window 2:
+
+  sudo docker exec -it notes-l5 ls /data
+  sudo docker exec -it notes-l5 sh -c "echo hello > /data/from-container.txt"
+  sudo docker exec -it notes-l5 cat /data/from-container.txt
+
+Ctrl+C (container gone). Run again with the SAME volume name:
+
+  sudo docker run --rm -p 8080:8080 -v notes-data:/data --name notes-l5 notes-api:l5
+
+  sudo docker exec -it notes-l5 cat /data/from-container.txt
+
+You should still see hello. The container died. The named volume did not.
+
+  sudo docker volume ls
+
+  [ ] File survived a new container via the volume
+
+
+--------------------------------------------------
+I. stop, start, rm  (without --rm)
+--------------------------------------------------
+
+Ctrl+C if a --rm container is still up.
+
+  sudo docker run -d -p 8080:8080 --name notes-l5 notes-api:l5
+
+-d = detached (runs in the background). No --rm, so the container stays after stop.
+
+  sudo docker ps
+  sudo docker stop notes-l5
+  sudo docker ps
+  sudo docker ps -a          # notes-l5 is there, Status: Exited
+  curl http://127.0.0.1:8080/health    # fails — process is off
+
+  sudo docker start notes-l5
+  curl http://127.0.0.1:8080/health    # works again
+
+  sudo docker rm -f notes-l5
+  sudo docker ps -a          # notes-l5 is gone
+  sudo docker images         # the IMAGE notes-api:l5 is still there
+
+stop = the process is off. rm = delete this container. The image remains.
+
+  [ ] stop, start, rm all behaved as above
+
+
+--------------------------------------------------
+J. Why lecture 2's 127.0.0.1 bind would fail in Docker
+--------------------------------------------------
+
+Lecture 2 listened on 127.0.0.1. Inside a container that means
+"only this container, not the mapped port."
+This copy uses 0.0.0.0 so -p 8080:8080 can reach it.
+You do not need to demo a failing file unless the tutor asks.
+
+
+--------------------------------------------------
+K. Cleanup — containers, then the EC2
+--------------------------------------------------
+
+On the EC2:
+
+  sudo docker rm -f notes-l5
+  sudo docker volume rm notes-data
+
+Then leave SSH (exit in both windows).
+
+Console (same as CLI-0 to CLI-3):
+
+1. EC2 → Instances → select lec05-docker → Instance state → Terminate instance
+   Wait until Instance state = Terminated
+2. EC2 → Security Groups → lec05-docker-ssh → Actions → Delete security group
+   (only after the instance is terminated)
+3. Optional: Key Pairs → lec05-docker → Delete
+   Then in Git Bash:  rm ~/lec05-docker.pem
+
+This EC2 is a practice box. Lecture 11 is the project instance. Terminate this one.
+A running micro is cheap; a forgotten NAT from lecture 4 is not. Check NAT is gone too.
+
+  [ ] instance terminated, no leftover notes-l5, 8080 not open to the world
+
+
+--------------------------------------------------
+Do not do today
+--------------------------------------------------
+
+  Docker Desktop on Windows
+  docker compose
+  docker push / Amazon ECR
+  Fargate, ECS, EKS
+  NAT Gateway, ALB
+  Opening 8080 on the security group
+  Spending money on anything except this one micro (terminate it)
+
+End of lab. Assignment: lec-05/assignment.md

@@ -1,0 +1,6 @@
+__pycache__
+*.pyc
+.git
+*.pem
+.env
+README.md

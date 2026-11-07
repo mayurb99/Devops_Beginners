@@ -32,3 +32,11 @@ CI/CD is **GitHub Actions**, not Jenkins. There is **no Git/GitHub lecture**. Ku
 - Three-cloud theory. AWS console demo (VPC, NAT, two hellos + ALB, S3, Lambda).
 - Lab: `lec-04/codebase/aws-lab-instructions.txt` · Assignment: `lec-04/assignment.md`
 - Delete NAT and the load balancer the same day.
+
+## Lecture 5 — Docker
+
+[lec-05/README.md](lec-05/README.md)
+
+- Student-readable PowerPoint (image vs container, Dockerfile, ports, env, volumes)
+- Lab: console launches one EC2 (CLI-0 to CLI-3); Docker and `curl /health` run **on that Linux box** (no Docker Desktop)
+- Assignment: `lec-05/assignment.md` — terminate the instance the same day

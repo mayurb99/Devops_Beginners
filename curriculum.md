@@ -59,12 +59,12 @@ Beginner-Friendly Learning Plan
 ## Lecture 5: Docker
 *Module 2: AWS and Containers*
 
-- Why containers are needed.
-- Images vs containers.
-- Dockerfile and image layers.
-- docker build, run, ps, logs, exec, stop and rm.
-- Ports, environment variables, volumes and .dockerignore.
-- Practical: containerize notes-api and call /health.
+- Why containers are needed (same bits on every machine).
+- Image vs container. Dockerfile, layers, .dockerignore.
+- Why the app must listen on 0.0.0.0 inside Docker (lecture 2 used 127.0.0.1).
+- docker build, run, ps, logs, exec, stop, rm. Ports, env, volumes.
+- Registries and Fargate named only (ECR and compose are lecture 6).
+- Practical: console starts one Amazon Linux EC2 (key, SG, Launch instance); Git Bash SSH; install Docker there; package notes-api; curl /health from a second SSH. Terminate the instance. Assignment: lec-05/assignment.md.
 
 ## Lecture 6: Docker Compose and Amazon ECR
 *Module 2: AWS and Containers*
