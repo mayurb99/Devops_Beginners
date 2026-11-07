@@ -63,18 +63,18 @@ Beginner-Friendly Learning Plan
 - Image vs container. Dockerfile, layers, .dockerignore.
 - Why the app must listen on 0.0.0.0 inside Docker (lecture 2 used 127.0.0.1).
 - docker build, run, ps, logs, exec, stop, rm. Ports, env, volumes.
-- Registries and Fargate named only (ECR and compose are lecture 6).
+- Registries named only (Hub, ECR, Azure/GCP names, and a short Fargate demo are lecture 6).
 - Practical: console starts one Amazon Linux EC2 (key, SG, Launch instance); Git Bash SSH; install Docker there; package notes-api; curl /health from a second SSH. Terminate the instance. Assignment: lec-05/assignment.md.
 
-## Lecture 6: Docker Compose and Amazon ECR
+## Lecture 6: Hub, ECR, and Fargate
 *Module 2: AWS and Containers*
 
-- Docker Compose for local run.
-- Multi-stage builds, image size and non-root user.
-- Secrets must not be stored in the image.
-- Amazon Elastic Container Registry (ECR).
-- Image tags and versioning; why not to rely on latest.
-- Practical: push a small notes-api image to ECR.
+- Image tags vs `latest`; secrets must not be stored in the image; non-root `USER`. Compose skipped (one service).
+- Docker Hub and Amazon ECR: push `notes-api:l6` to both.
+- Azure/GCP names only: ACR + Container Apps; Artifact Registry + Cloud Run.
+- Fargate (ECS): one task, public subnet + public IP (no NAT), curl `/health` from Windows, CloudWatch logs.
+- Practical: `docker build` / `run` on one Amazon Linux EC2; Hub + ECR; Fargate demo; delete service, cluster, ECR, and EC2 the same day (~75 min).
+- Lecture 11 project remains one EC2 + GitHub Actions, not Fargate.
 
 ## Lecture 7: Kubernetes
 *Module 3: Kubernetes and Terraform*

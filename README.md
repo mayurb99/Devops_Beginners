@@ -40,3 +40,12 @@ CI/CD is **GitHub Actions**, not Jenkins. There is **no Git/GitHub lecture**. Ku
 - Student-readable PowerPoint (image vs container, Dockerfile, ports, env, volumes)
 - Lab: console launches one EC2 (CLI-0 to CLI-3); Docker and `curl /health` run **on that Linux box** (no Docker Desktop)
 - Assignment: `lec-05/assignment.md` — terminate the instance the same day
+
+## Lecture 6 — Hub, ECR, Fargate
+
+[lec-06/README.md](lec-06/README.md)
+
+- Student-readable PowerPoint (path diagrams, Hub vs ECR, Azure/GCP names, Fargate, money)
+- Lab: `docker build` / `run` on one Amazon Linux EC2; push `:l6` to Docker Hub and ECR; one Fargate task (public IP); `curl` `/health` from Windows; delete the same day. No Compose.
+- Assignment: `lec-06/assignment.md` — Fargate and the practice EC2 must be gone before the student leaves
+- Lecture 11 project is still one EC2 + GitHub Actions, not Fargate

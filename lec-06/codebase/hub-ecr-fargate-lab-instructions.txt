@@ -1,0 +1,567 @@
+Lecture 6 — Docker Hub, ECR, Fargate
+Docker still runs on Amazon Linux EC2. Windows has no Docker Desktop.
+Console starts the box and the AWS pieces (ECR, Fargate). Git Bash is SSH + curl.
+
+Need on Windows: a browser (AWS console), Git Bash, the same Region as lectures 4–5.
+Need a free Docker Hub account (hub.docker.com) before class. Access token, not your Hub password.
+You package notes-api. You do not rewrite the Python.
+No Docker Compose today. One container — lecture 5’s docker build / docker run is enough.
+
+Clock: about 75 minutes. Do not add extra demos. Cleanup is part of class.
+
+  0–12 min   slides (path, Hub vs ECR, Azure/GCP names, Fargate, money)
+ 12–25 min   EC2 + docker build + docker run + curl on the box
+ 25–38 min   Docker Hub push
+ 38–50 min   ECR create + push
+ 50–68 min   Fargate run + curl from Windows
+ 68–75 min   delete everything
+
+CLI-0 to CLI-3 = console buttons (key, SG, IAM role, Launch instance).
+CLI-4 onward = Git Bash ssh, then sudo docker on the EC2.
+Fargate / ECR create = console buttons. You curl Fargate from Windows Git Bash.
+
+
+--------------------------------------------------
+Where each step runs
+--------------------------------------------------
+
+  Browser (AWS console)  =  key, SG, IAM role, Launch instance, ECR, ECS/Fargate
+  Windows Git Bash       =  chmod, ssh, scp, then curl to Fargate’s public IP
+  EC2 (after ssh)        =  sudo docker build / run / push / aws ecr login
+
+Open TWO Git Bash windows. SSH twice into the same instance
+(one for docker run logs, one for curl on the EC2).
+
+
+--------------------------------------------------
+CLI-0. Sign in and lock the Region  (console)
+--------------------------------------------------
+
+1. Open https://console.aws.amazon.com
+2. Top right: click the Region name.
+3. Choose the SAME Region as lectures 4 and 5. Do not change it again today.
+   Write it here: REGION = _______________________________
+4. Top right, click the account name. Copy the 12-digit Account ID.
+   Write it here: ACCOUNT = _______________________________
+5. If the console looks empty, you are in the wrong Region.
+
+  [ ] REGION and ACCOUNT written down
+
+
+--------------------------------------------------
+CLI-1. SSH key  (console, once)
+--------------------------------------------------
+
+Reuse lec05-docker if you still have ~/lec05-docker.pem. Same key, new instance name.
+
+If you do not have that .pem:
+
+1. EC2 → Network & Security → Key Pairs
+2. Create key pair
+   Name: lec06-docker
+   Key pair type: RSA
+   Private key file format: .pem
+3. Create key pair. Browser downloads lec06-docker.pem.
+4. Git Bash:
+
+     mv /c/Users/mayur_brijwani/Downloads/lec06-docker.pem ~/lec06-docker.pem
+     chmod 400 ~/lec06-docker.pem
+
+KEYFILE is either ~/lec05-docker.pem or ~/lec06-docker.pem.
+Write it here: KEYFILE = _______________________________
+
+  [ ] KEYFILE exists, chmod 400
+
+
+--------------------------------------------------
+CLI-2. Security group — SSH only  (console)
+--------------------------------------------------
+
+EC2 is only for Docker. You curl on the EC2 itself (127.0.0.1).
+Fargate gets a DIFFERENT security group later (8080). Do not open 8080 on this SG.
+
+1. EC2 → Network & Security → Security Groups
+2. Create security group
+   Name: lec06-docker-ssh
+   Description: Lecture 6 SSH only
+   VPC: the Default VPC  (not lecture 4’s custom VPC)
+3. Inbound rules → Add rule
+   Type: SSH
+   Port: 22
+   Source: My IP
+4. Create security group
+
+If your wifi changed since lecture 5, My IP changed. Edit the rule.
+
+  [ ] SG allows 22 from My IP. 8080 is not open on this SG.
+
+
+--------------------------------------------------
+CLI-2b. IAM role so this EC2 can push to ECR  (console)
+--------------------------------------------------
+
+Without this role, docker push to ECR fails. Do this BEFORE Launch instance.
+
+1. Search bar: IAM  →  Roles  →  Create role
+2. Trusted entity: AWS service
+3. Use case: EC2  →  Next
+4. Permissions: search AmazonEC2ContainerRegistryPowerUser
+   Tick that policy  →  Next
+5. Role name: lec06-ec2-ecr
+6. Create role
+
+  [ ] Role lec06-ec2-ecr exists
+
+
+--------------------------------------------------
+CLI-3. Launch one Amazon Linux 2023 micro  (console)
+--------------------------------------------------
+
+1. EC2 → Instances → Launch instance
+2. Name: lec06-docker
+3. AMI: Amazon Linux 2023
+4. Instance type: t3.micro
+   (Free tier eligible t2.micro is fine.)
+5. Key pair: the key that matches KEYFILE
+6. Network settings → Edit
+   VPC: Default VPC
+   Subnet: a default subnet (any AZ)
+   Auto-assign public IP: Enable
+   Firewall: Select existing security group
+   Security groups: lec06-docker-ssh   (only this one)
+7. Storage: 8 GB. No user data.
+8. Advanced details → IAM instance profile: lec06-ec2-ecr
+   If the list is empty, you skipped CLI-2b. Cancel and create the role first.
+9. Launch instance
+
+10. Click the instance id. Wait until:
+    Instance state = Running
+    Status check = 2/2
+    Do not ssh before 2/2.
+
+11. Copy Public IPv4:
+    PUBLIC = _______________________________
+
+If Public IPv4 is empty: Auto-assign was off, or you picked lecture 4’s
+private subnet. Terminate. Launch again in Default VPC, public IP Enable.
+
+This micro is practice. Terminate it at Demo I. Lecture 11 is the project EC2.
+
+  [ ] Running, 2/2, PUBLIC is an IP, IAM profile is attached
+
+
+--------------------------------------------------
+CLI-4. SSH twice, install Docker
+--------------------------------------------------
+
+Replace $PUBLIC with the IP. Use your KEYFILE path.
+
+Window 1:
+
+  ssh -i ~/lec06-docker.pem -o StrictHostKeyChecking=accept-new ec2-user@$PUBLIC
+
+Window 2 (same command, same IP).
+
+If ssh times out: SG is not My IP, or 2/2 is not done.
+Do not use browser Instance Connect today.
+
+On the EC2 (window 1):
+
+  sudo dnf install -y docker git
+  sudo systemctl enable --now docker
+  sudo docker version
+
+You must see Client AND Server. We use sudo docker so you do not need to log out.
+
+  [ ] sudo docker version shows Server
+
+
+--------------------------------------------------
+CLI-5. Put notes-api on the EC2
+--------------------------------------------------
+
+Pick ONE: git clone (A) or scp (B).
+A needs lec-06 on GitHub. If clone has no lec-06 folder, use B.
+
+
+A. git clone  (on the EC2, window 1)
+
+  git clone https://github.com/mayurb99/Devops_Beginners.git
+  cp -r ~/Devops_Beginners/lec-06/codebase/notes-api ~/notes-api
+
+If ls ~/Devops_Beginners shows no lec-06, Lecture 6 is not pushed yet. Use B.
+
+
+B. scp  (third Git Bash on Windows — not ssh)
+
+  cd "/c/Users/mayur_brijwani/Desktop/New folder (2)/Devops_Beginners/lec-06/codebase"
+  scp -i ~/lec06-docker.pem -o StrictHostKeyChecking=accept-new -r notes-api ec2-user@$PUBLIC:~/
+
+If the folder path is different on your PC, cd to wherever notes-api lives.
+
+
+Then, on EC2 window 1:
+
+  ls ~/notes-api
+  cat ~/notes-api/Dockerfile
+
+You should see notes-api.py, Dockerfile, .dockerignore.
+Read the Dockerfile (USER appuser is new vs lecture 5). Do not invent a new one.
+
+  [ ] files are on the EC2
+
+
+--------------------------------------------------
+Demo A — build notes-api:l6
+--------------------------------------------------
+
+  cd ~/notes-api
+  sudo docker build -t notes-api:l6 .
+
+The dot means this folder. First build downloads python:3.12-slim. Wait for
+“Successfully tagged notes-api:l6”.
+
+  sudo docker images
+
+Look for notes-api    l6
+
+  [ ] Image notes-api:l6 exists
+
+
+--------------------------------------------------
+Demo B — run and curl /health on the EC2
+--------------------------------------------------
+
+Window 1:
+
+  sudo docker run --rm -p 8080:8080 --name notes-l6 notes-api:l6
+
+Leave it open. You should see:
+  API is running at http://0.0.0.0:8080
+
+Window 2:
+
+  curl http://127.0.0.1:8080/health
+  curl http://127.0.0.1:8080/notes
+
+You should get {"status": "ok"} and the notes list.
+
+If the name is in use:
+  sudo docker rm -f notes-l6
+  then run again.
+
+-p 8080:8080  LEFT = this EC2. RIGHT = inside the container.
+You curl the LEFT number on the EC2. 8080 is still closed on the security group.
+
+  [ ] /health is ok on the EC2
+
+
+--------------------------------------------------
+Demo C — tags vs latest
+--------------------------------------------------
+
+Window 2:
+
+  sudo docker images | head
+
+Look for notes-api    l6
+
+Tag means name:version. latest is just a name people over-use.
+If you pull latest next month, you might get a different image.
+Today we pin l6. Fargate will also pin :l6, not :latest.
+
+  [ ] I see notes-api:l6
+
+
+--------------------------------------------------
+Demo D — Docker Hub (public shelf)
+--------------------------------------------------
+
+On YOUR laptop browser (not AWS):
+
+1. Open https://hub.docker.com  Sign in (create account if needed).
+2. Create repository
+   Name: notes-api
+   Visibility: Private if the free plan allows it, else Public for class
+3. Account → Security → New Access Token
+   Description: lec06
+   Permissions: Read, Write, Delete
+   Copy the token ONCE. Do not paste it into Slack or GitHub.
+
+On the EC2, window 2 (the container can keep running):
+
+  HUB=_______________________________
+  (your Docker Hub username, no spaces)
+
+  sudo docker login -u $HUB
+  (paste the ACCESS TOKEN as the password; it will not echo)
+
+  sudo docker tag notes-api:l6 $HUB/notes-api:l6
+  sudo docker push $HUB/notes-api:l6
+
+Browser: Hub → notes-api → Tags. You should see l6.
+
+Proof the shelf holds it (optional if the clock is past 38 min):
+
+  sudo docker rmi $HUB/notes-api:l6
+  sudo docker pull $HUB/notes-api:l6
+  sudo docker images | grep notes-api
+
+Do not put the token in the Dockerfile.
+
+  [ ] Hub shows tag l6
+
+
+--------------------------------------------------
+Demo E — Amazon ECR (AWS’s shelf)
+--------------------------------------------------
+
+Console:
+
+1. Search: Elastic Container Registry  →  Repositories
+2. Create repository
+   Visibility: Private
+   Repository name: notes-api
+   Tag immutability: Disabled (class default)
+3. Create
+4. Copy the URI. It looks like:
+   ACCOUNT.dkr.ecr.REGION.amazonaws.com/notes-api
+   Write URI = _______________________________
+
+On the EC2, window 2. Use the REGION and ACCOUNT from CLI-0:
+
+  REGION=_______________________________
+  ACCOUNT=_______________________________
+  URI=$ACCOUNT.dkr.ecr.$REGION.amazonaws.com/notes-api
+
+  aws sts get-caller-identity
+  (Account must match ACCOUNT. If AccessDenied, the instance profile is missing.
+   Stop. Console: instance → Actions → Security → Modify IAM role → lec06-ec2-ecr)
+
+  aws ecr get-login-password --region $REGION | sudo docker login --username AWS --password-stdin $ACCOUNT.dkr.ecr.$REGION.amazonaws.com
+
+  sudo docker tag notes-api:l6 $URI:l6
+  sudo docker push $URI:l6
+
+Console: ECR → notes-api → Images. You should see l6.
+
+Hub = Docker’s website. ECR = AWS’s shelf in THIS account, THIS Region.
+Fargate in this account pulls from ECR. It does not pull your Hub image today.
+
+Same job on other clouds (names only, no lab):
+  Azure registry = ACR     run without a VM = Container Apps (ACI is the older name)
+  GCP registry   = Artifact Registry     run without a VM = Cloud Run
+
+  [ ] ECR shows tag l6
+
+
+--------------------------------------------------
+Demo F — Fargate: run the image with no SSH
+--------------------------------------------------
+
+Fargate = ECS runs the container. You do not pick an EC2 size. You do not SSH in.
+Money: 0.25 vCPU + 0.5 GB is cents per hour, but it is NOT free forever.
+Public subnet + public IP so the task can pull ECR WITHOUT lecture 4’s NAT.
+Open 8080 on the Fargate SG for class. Delete this stack the same day.
+
+Stay in the SAME Region.
+
+
+F1. Cluster  (console)
+
+1. Search: ECS  →  Clusters  →  Create cluster
+2. Cluster name: lec06-cluster
+3. Infrastructure: AWS Fargate (serverless)
+4. Monitoring: leave default / off if offered
+5. Create
+
+
+F2. Task definition  (console)
+
+1. ECS → Task definitions → Create new task definition
+2. Task definition family: notes-api
+3. Launch type: AWS Fargate
+4. OS/Architecture: Linux / X86_64
+5. CPU: 0.25 vCPU
+   Memory: 0.5 GB
+6. Task role: None
+7. Task execution role: Create new role
+   (console makes ecsTaskExecutionRole with AmazonECSTaskExecutionRolePolicy.
+    That policy lets Fargate pull from ECR and write CloudWatch logs.
+    If the role already exists, select ecsTaskExecutionRole.)
+8. Container — 1
+   Name: notes
+   Image URI: paste $URI:l6
+     example: 123456789012.dkr.ecr.ap-south-1.amazonaws.com/notes-api:l6
+     Must include :l6. Do not use :latest.
+   Port mappings: 8080  TCP  (name http is fine)
+   Environment variables → Add
+     HOST   =  0.0.0.0
+     PORT   =  8080
+9. Logging: leave “Use log collection” on (CloudWatch).
+10. Create
+
+
+F3. Service  (console)
+
+1. ECS → Clusters → lec06-cluster → Services → Create
+2. Compute options: Launch type  →  Fargate
+3. Application type: Service
+4. Family: notes-api   Revision: latest (this means latest TASK DEF revision, not the image tag)
+5. Service name: notes-svc
+6. Desired tasks: 1
+7. Networking
+   VPC: Default VPC
+   Subnets: pick default subnets (they are public — they have an internet gateway)
+   Security group: Create a new security group
+     Name: lec06-fargate-8080
+     Inbound: Custom TCP, port 8080, source 0.0.0.0/0
+     (class demo only. Delete today.)
+   Public IP: TURNED ON
+     If this is off, the task cannot pull ECR without NAT, and you cannot curl it.
+8. Load balancing: None
+9. Create
+
+Wait until the service is Active and running count = 1.
+If the task is STOPPED: open the task → Stopped reason.
+  CannotPullContainerError = public IP off, or image URI wrong, or execution role missing.
+  ResourceInitializationError = same: no route to ECR. Public IP must be on.
+
+
+F4. Public IP and curl from Windows
+
+1. Cluster → lec06-cluster → Tasks  (or Service → Tasks)
+2. Click the running task
+3. Configuration / Network → Public IP
+   FARGATE_IP = _______________________________
+
+4. Windows Git Bash (a window that is NOT ssh — your laptop):
+
+  curl http://FARGATE_IP:8080/health
+  curl http://FARGATE_IP:8080/notes
+
+Replace FARGATE_IP with the number. You should get {"status": "ok"}.
+
+This curl is from Windows to Fargate. Lecture 5 curled 127.0.0.1 on the EC2.
+Different computer, same image tag :l6.
+
+If curl hangs: SG is not 8080 from 0.0.0.0/0, or you used the EC2 IP by mistake.
+
+
+F5. Logs (CloudWatch) — 2 minutes
+
+1. Same task page → Logs  (or CloudWatch → Log groups → /ecs/notes-api)
+2. You should see: API is running at http://0.0.0.0:8080
+3. There is no SSH into Fargate. Logs are how you debug.
+
+  [ ] curl from Windows returned ok
+  [ ] I saw the log line in CloudWatch
+
+
+--------------------------------------------------
+Demo G — three shelves, one image (talk, 1 minute)
+--------------------------------------------------
+
+  This EC2          notes-api:l6                 (docker images)
+  Docker Hub        YOURHUB/notes-api:l6         (website)
+  Amazon ECR        URI:l6                       (this AWS account)
+  Fargate           pulled URI:l6                (no SSH)
+
+Same Dockerfile. Same tag l6.
+Azure names: ACR + Container Apps. GCP names: Artifact Registry + Cloud Run.
+The project (lecture 11) runs Docker on one EC2 again — not Fargate.
+
+
+--------------------------------------------------
+Demo H — stop the EC2 container
+--------------------------------------------------
+
+Window 1: Ctrl+C
+Window 2:
+
+  sudo docker ps
+
+notes-l6 should be gone (--rm). Fargate is separate — still up until Demo I.
+
+
+--------------------------------------------------
+Demo I — cleanup  (do this in class)
+--------------------------------------------------
+
+Order matters. Delete the service before the cluster.
+
+Console:
+
+1. ECS → Clusters → lec06-cluster → Service notes-svc → Update
+   Desired tasks: 0  →  Update
+   Wait until running = 0
+   Then Delete service. Tick the force/delete box if shown.
+
+2. Cluster lec06-cluster → Delete cluster. Confirm.
+
+3. ECS → Task definitions → notes-api → Deregister
+   (Deregister every revision you created today.)
+
+4. ECR → Repositories → notes-api → Delete
+   Tick to delete images. Delete.
+
+5. EC2 → Instances → lec06-docker → Instance state → Terminate
+   Wait until Terminated.
+
+6. Security Groups
+   Delete lec06-fargate-8080
+   Delete lec06-docker-ssh
+   (You cannot delete an SG while something still uses it. Wait for terminate.)
+
+7. CloudWatch → Log groups → /ecs/notes-api (or the name on the task) → Delete
+
+8. IAM → Roles → lec06-ec2-ecr → Delete
+   If ecsTaskExecutionRole was created new for class and nothing else uses it,
+   you may leave it (other ECS tutorials reuse it) or delete it.
+
+9. Docker Hub: optional. Delete the repo or the l6 tag if you do not want it public.
+
+On the EC2, if it is still up:
+
+  sudo docker rm -f notes-l6
+  exit
+
+  [ ] Fargate service gone, cluster gone, ECR repo gone, EC2 terminated, SGs gone
+
+
+--------------------------------------------------
+If something fails
+--------------------------------------------------
+
+ssh times out
+  SG not My IP, or 2/2 not done, or you used Instance Connect instead of Git Bash.
+
+port is already allocated
+  sudo docker rm -f notes-l6
+  then docker run again.
+
+docker login Hub: denied
+  Use an access token, not the Hub password. Username is Hub username, not email.
+
+ECR login / push: AccessDenied
+  Instance profile missing. Modify IAM role on the instance to lec06-ec2-ecr.
+  Wait 30 seconds. aws sts get-caller-identity again.
+
+ECR push: repository does not exist
+  Create notes-api in THIS Region. URI Region must match REGION.
+
+Fargate task STOPPED CannotPullContainerError
+  Public IP was off, or image URI missing :l6, or execution role missing ECR pull.
+  Delete the service. Fix the task def / networking. Create the service again.
+
+curl to Fargate hangs
+  You used the EC2 IP, or Fargate SG has no 8080, or the task is not RUNNING.
+
+curl to Fargate connection refused
+  Container crashed. Open task logs. Image must listen on 0.0.0.0:8080
+  (the lecture 6 notes-api file already does).
+
+Money scare
+  Fargate + ECR + one micro for one class is cents to a couple of dollars
+  if you delete today. NAT from lecture 4 is the expensive leftover — delete that too
+  if it is still running.

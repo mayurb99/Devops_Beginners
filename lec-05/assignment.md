@@ -53,7 +53,7 @@ Why does the Lecture 5 API listen on `0.0.0.0` instead of `127.0.0.1`?
 
 ## 8. Later (names only)
 
-Where in this course do we push an image (ECR)? Where is Fargate named? Where is Kubernetes?
+Where in this course do we push an image (Hub + ECR)? Where do we run a short Fargate demo? Where is Kubernetes? (Project deploy in lecture 11 is still one EC2.)
 
 ---
 
