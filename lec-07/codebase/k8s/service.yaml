@@ -1,0 +1,20 @@
+# Lecture 7 — a stable door in front of Pods whose IPs change.
+# type LoadBalancer: Kubernetes asks AWS for a public hostname.
+# You do not click Create load balancer in the EC2 console.
+# port 80 = what the browser uses. targetPort 8080 = inside the container.
+#
+# After apply: kubectl get svc notes
+# EXTERNAL-IP starts as <pending>, then becomes a hostname.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: notes
+spec:
+  type: LoadBalancer
+  selector:
+    app: notes
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080

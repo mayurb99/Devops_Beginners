@@ -1,0 +1,538 @@
+Lecture 7 — Kubernetes on EKS (console)
+You already packed notes-api and ran it on Fargate (lecture 6).
+Today you put the same app on a Kubernetes cluster that you create in the AWS console.
+The image lives in ECR. The browser opens a public URL from a Service of type LoadBalancer.
+That Service asks AWS for a hostname. You do not click Create load balancer in the EC2 console.
+
+Windows has no Docker Desktop. You build the image on one Amazon Linux EC2 (same idea as lecture 5).
+kubectl runs in CloudShell (a terminal inside the AWS console). You do not install kubectl on Windows.
+
+Need: a browser, Git Bash (only for SSH to the build EC2), the SAME Region as lectures 4–6.
+You do not rewrite notes-api.py. You do not invent YAML.
+
+Clock: about 75 minutes. Start the EKS cluster as soon as the VPC and IAM roles exist.
+The cluster takes 10–15 minutes. You push the image to ECR while you wait.
+Cleanup is part of this class. EKS is billed even with zero Pods.
+
+  0–18 min    read the deck (why not Fargate only, then Kubernetes words)
+ 18–28 min    VPC + IAM roles + ECR
+ 28–32 min    click Create cluster (then leave it cooking)
+ 32–48 min    build notes-api:l7 on a tiny EC2, push ECR
+ 48–62 min    node group, CloudShell, apply YAML, wait for EXTERNAL-IP
+ 62–68 min    open the HTML page, Add note, Show notes
+ 68–75 min    delete Service, node group, cluster, EC2, VPC
+
+
+--------------------------------------------------
+Money — read this before any Create button
+--------------------------------------------------
+
+EKS control plane ≈ 0.10 USD per hour even if no Pods are running.
+The LoadBalancer Service creates an AWS load balancer (billed) until you delete the Service.
+Two t3.small nodes use hours. One t3.micro build box uses Free Tier hours if you still have them.
+
+If you leave the cluster overnight you get a bill.
+Section Z is not optional.
+
+
+--------------------------------------------------
+0. Sign in and lock the Region
+--------------------------------------------------
+
+1. Open https://console.aws.amazon.com
+2. Top right: click the Region name.
+3. Choose the SAME Region as lectures 4–6. Do not change it again today.
+   REGION = _______________________________
+4. Top right: click the account name. Copy the 12-digit Account ID.
+   ACCOUNT = _______________________________
+5. If the console looks empty, you are in the wrong Region.
+
+  [ ] REGION and ACCOUNT written down
+
+
+--------------------------------------------------
+A. VPC for Kubernetes  (console)
+--------------------------------------------------
+
+EKS needs two Availability Zones. A LoadBalancer Service needs public subnets
+that can reach the internet. You do not create NAT today. Nodes sit in public
+subnets with a public IP so they can pull ECR without NAT.
+
+Do not reuse lecture 4’s notes-net if it still has a NAT. This VPC is only for today.
+
+1. Search: VPC
+2. Create VPC
+3. Resources to create: VPC and more
+4. Fill in:
+   Name tag: notes-k8s
+   IPv4 CIDR: 10.7.0.0/16
+   Number of Availability Zones: 2
+   Number of public subnets: 2
+   Number of private subnets: 0
+     If the form will not accept 0, set private to 1 and never put nodes there.
+   NAT gateways: None
+   VPC endpoints: None
+   Enable DNS hostnames: Yes
+5. Create VPC
+6. Wait until it finishes. Open VPC notes-k8s.
+   VPC ID = _______________________________
+
+7. Left: Subnets. You should see two public subnets in two different AZs.
+   For EACH public subnet:
+   - Click it → Actions → Edit subnet settings
+   - Enable auto-assign public IPv4 address → Save
+   - Tags → Add tag
+       kubernetes.io/role/elb  =  1
+   - Add tag
+       kubernetes.io/cluster/lec07-eks  =  shared
+
+   Those tags tell Kubernetes “put the public load balancer here.”
+
+Write the two subnet IDs:
+  public-a = _______________________________
+  public-b = _______________________________
+
+  [ ] VPC notes-k8s exists, two public subnets, auto-assign IPv4 on, two tags on each
+
+
+--------------------------------------------------
+B. IAM roles  (console) — three roles
+--------------------------------------------------
+
+Kubernetes on EKS uses roles. You do not paste access keys into a Pod.
+
+
+B1. Cluster role  (the control plane)
+
+1. Search: IAM → Roles → Create role
+2. Trusted entity: AWS service
+3. Use case: EKS  →  EKS - Cluster  →  Next
+   (If you do not see EKS - Cluster: use EKS and pick the cluster trust.)
+4. Policy AmazonEKSClusterPolicy should already be ticked → Next
+5. Role name: lec07-eks-cluster-role
+6. Create role
+
+
+B2. Node role  (the worker EC2s)
+
+1. IAM → Roles → Create role
+2. Trusted entity: AWS service → EC2 → Next
+3. Tick ALL three:
+     AmazonEKSWorkerNodePolicy
+     AmazonEKS_CNI_Policy
+     AmazonEC2ContainerRegistryReadOnly
+   Next
+4. Role name: lec07-eks-node-role
+5. Create role
+
+AmazonEC2ContainerRegistryReadOnly lets the node pull your ECR image.
+Without it the Pod stays ImagePullBackOff.
+
+
+B3. Build-box role  (so the tiny EC2 can push to ECR)
+
+1. IAM → Roles → Create role
+2. AWS service → EC2 → Next
+3. Tick AmazonEC2ContainerRegistryPowerUser → Next
+4. Role name: lec07-ec2-ecr
+5. Create role
+
+  [ ] three roles exist
+
+
+--------------------------------------------------
+C. ECR repository  (console)
+--------------------------------------------------
+
+1. Search: Elastic Container Registry → Repositories → Create
+2. Visibility: Private
+3. Repository name: notes-api
+   If notes-api already exists from lecture 6, do not create a second one. Open it.
+4. Create
+5. Copy the URI:
+   URI = ACCOUNT.dkr.ecr.REGION.amazonaws.com/notes-api
+   Write URI = _______________________________
+
+  [ ] ECR notes-api exists in THIS Region
+
+
+--------------------------------------------------
+D. Create the EKS cluster NOW  (console) — then let it cook
+--------------------------------------------------
+
+Do not wait for Docker. Cluster create is the slow step.
+
+1. Search: EKS  (Elastic Kubernetes Service) → Clusters → Create cluster
+2. If you see Quick configuration vs Custom, choose Custom
+3. Name: lec07-eks
+4. Kubernetes version: leave the default
+5. Cluster service role: lec07-eks-cluster-role
+6. Networking
+   VPC: notes-k8s
+   Subnets: BOTH public subnets from section A
+   Security groups: leave the default for that VPC
+   Cluster endpoint access: Public
+7. Cluster access / authentication
+   Turn ON the option that gives the cluster creator administrator access
+   (wording: “Allow cluster administrator access” or “include cluster creator”).
+   If you skip this, CloudShell will say Unauthorized after the cluster is green.
+8. Add-ons: leave the defaults (vpc-cni, kube-proxy, CoreDNS)
+9. Create
+
+Status will sit on Creating for 10–15 minutes. That is normal.
+Go to section E while it creates. Do not click Create twice.
+
+  [ ] Cluster lec07-eks is Creating or Active
+
+
+--------------------------------------------------
+E. Build notes-api:l7 and push to ECR  (console + Git Bash)
+--------------------------------------------------
+
+The HTML page is new. Lecture 6’s image does not have GET /.
+You build this lecture’s folder and push tag l7.
+
+
+E1. SSH key
+
+Reuse ~/lec05-docker.pem or ~/lec06-docker.pem if you still have it.
+If not: EC2 → Key Pairs → Create lec07-docker → RSA → .pem
+Move it and chmod 400:
+
+  mv /c/Users/mayur_brijwani/Downloads/lec07-docker.pem ~/lec07-docker.pem
+  chmod 400 ~/lec07-docker.pem
+
+KEYFILE = _______________________________
+
+
+E2. Security group for the build box — SSH only
+
+1. EC2 → Security Groups → Create
+   Name: lec07-build-ssh
+   VPC: notes-k8s   (not the default VPC, not lecture 4)
+   Inbound: SSH 22  Source My IP
+   Do not open 80 or 8080 here. The browser will use the Kubernetes Service, not this box.
+2. Create
+
+
+E3. Launch the build EC2
+
+1. EC2 → Launch instance
+   Name: lec07-build
+   AMI: Amazon Linux 2023
+   Type: t3.micro
+   Key: the key that matches KEYFILE
+   Network: VPC notes-k8s, a public subnet, Auto-assign public IP Enable
+   Security group: lec07-build-ssh only
+   Advanced details → IAM instance profile: lec07-ec2-ecr
+2. Launch. Wait Running + Status check 2/2.
+   BUILD_IP = _______________________________
+
+
+E4. SSH and install Docker  (Git Bash)
+
+  ssh -i ~/lec07-docker.pem -o StrictHostKeyChecking=accept-new ec2-user@$BUILD_IP
+
+On the EC2:
+
+  sudo dnf install -y docker git
+  sudo systemctl enable --now docker
+  sudo docker version
+
+You must see Client AND Server.
+
+
+E5. Put lecture 7 notes-api on the box
+
+A. git clone (on the EC2) — needs lec-07 on GitHub:
+
+  git clone https://github.com/mayurb99/Devops_Beginners.git
+  cp -r ~/Devops_Beginners/lec-07/codebase/notes-api ~/notes-api
+
+If there is no lec-07 folder, use B.
+
+B. scp from Windows (third Git Bash):
+
+  cd "/c/Users/mayur_brijwani/Desktop/New folder (2)/Devops_Beginners/lec-07/codebase"
+  scp -i ~/lec07-docker.pem -r notes-api ec2-user@$BUILD_IP:~/
+
+
+E6. Build and push
+
+  cd ~/notes-api
+  cat Dockerfile
+  sudo docker build -t notes-api:l7 .
+
+  REGION=_______________________________
+  ACCOUNT=_______________________________
+  URI=$ACCOUNT.dkr.ecr.$REGION.amazonaws.com/notes-api
+
+  aws sts get-caller-identity
+  (Account must match. If AccessDenied, attach IAM role lec07-ec2-ecr to the instance.)
+
+  aws ecr get-login-password --region $REGION | sudo docker login --username AWS --password-stdin $ACCOUNT.dkr.ecr.$REGION.amazonaws.com
+
+  sudo docker tag notes-api:l7 $URI:l7
+  sudo docker push $URI:l7
+
+Console: ECR → notes-api → you should see tag l7.
+
+  [ ] ECR shows notes-api:l7
+
+
+--------------------------------------------------
+F. Node group  (console) — cluster must be Active first
+--------------------------------------------------
+
+1. EKS → Clusters → lec07-eks
+   Wait until Status = Active. Refresh if needed.
+2. Compute tab → Add node group
+   Name: lec07-nodes
+   Node IAM role: lec07-eks-node-role
+3. Instance type: t3.small
+   (t3.micro is too small for kubelet + your Pod.)
+   Disk: 20 GiB is enough
+   Desired: 2     Min: 2     Max: 2
+   Two nodes in two AZs is the simple, reliable class size.
+4. Networking
+   Subnets: the SAME two public subnets
+   Configure SSH access: optional Off (you debug with kubectl, not SSH to nodes)
+5. Create. Wait until the node group is Active (several minutes).
+
+  [ ] Node group Active
+
+
+--------------------------------------------------
+G. CloudShell — kubectl talks to THIS cluster
+--------------------------------------------------
+
+1. In the AWS console, click the CloudShell icon (terminal, top right).
+   First open can take a minute.
+2. Check the Region drop-down inside CloudShell matches REGION.
+
+  aws eks update-kubeconfig --name lec07-eks --region $REGION
+  kubectl get nodes
+
+You should see two nodes Ready.
+If Unauthorized / Your current IAM principal doesn’t have access:
+  Cluster → Access tab → Create access entry → your IAM user/role → AmazonEKSClusterAdminPolicy.
+  Then run update-kubeconfig again.
+
+  [ ] kubectl get nodes shows Ready
+
+
+--------------------------------------------------
+H. Apply Deployment and Service
+--------------------------------------------------
+
+In CloudShell, write the URI you copied in section C, with tag l7:
+
+  URI=ACCOUNT.dkr.ecr.REGION.amazonaws.com/notes-api
+  # example: 123456789012.dkr.ecr.ap-south-1.amazonaws.com/notes-api
+
+If lec-07 is already on GitHub:
+
+  git clone https://github.com/mayurb99/Devops_Beginners.git
+  cd Devops_Beginners/lec-07/codebase/k8s
+  sed -i "s|image: IMAGE|image: ${URI}:l7|" deployment.yaml
+  cat deployment.yaml
+  kubectl apply -f deployment.yaml
+  kubectl apply -f service.yaml
+
+If clone has no lec-07, paste the two files yourself.
+
+deployment.yaml (IMAGE already replaced with ${URI}:l7):
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notes
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notes
+  template:
+    metadata:
+      labels:
+        app: notes
+    spec:
+      containers:
+        - name: notes
+          image: PUT-YOUR-URI-HERE:l7
+          ports:
+            - containerPort: 8080
+          env:
+            - name: HOST
+              value: "0.0.0.0"
+            - name: PORT
+              value: "8080"
+
+service.yaml:
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: notes
+spec:
+  type: LoadBalancer
+  selector:
+    app: notes
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+
+Create them:
+
+  nano deployment.yaml
+  nano service.yaml
+  kubectl apply -f deployment.yaml
+  kubectl apply -f service.yaml
+
+Then:
+
+  kubectl get deploy
+  kubectl get pods -o wide
+  kubectl get svc notes
+
+DEPLOYMENT notes should show 1/1.
+POD should be Running.
+SERVICE EXTERNAL-IP starts as <pending>. Wait 2–5 minutes. Run get svc again.
+
+When EXTERNAL-IP is a hostname (not pending, not none):
+
+  URL = http://EXTERNAL-IP/
+  Write it: _______________________________
+
+Do not add :8080. The Service port is 80.
+
+  [ ] Pod Running, Service has a hostname
+
+
+--------------------------------------------------
+I. If the Pod is not Running
+--------------------------------------------------
+
+  kubectl describe pod -l app=notes
+  kubectl logs -l app=notes
+
+ImagePullBackOff
+  Image URI wrong, missing :l7, or node role missing AmazonEC2ContainerRegistryReadOnly.
+  Fix the Deployment image, kubectl apply -f deployment.yaml again.
+
+CrashLoopBackOff
+  App exited. logs will show the Python error. Use the lecture 7 notes-api file.
+
+Pending
+  Nodes not Ready, or not enough CPU/memory. Wait for the node group.
+
+
+--------------------------------------------------
+J. Open the HTML page on your Windows browser
+--------------------------------------------------
+
+1. Paste http://EXTERNAL-IP/ into Chrome or Edge. Use http, not https.
+2. You should see the notes-api page: a text box, Add note, Show notes, and two starter notes.
+3. Type a line. Click Add note. Click Show notes. The new line should appear.
+4. Bottom of the page: “This page was served by Pod: …” — that name is this one Pod.
+
+If the tab spins forever:
+  The node security group is not allowing HTTP in.
+  EC2 → Security Groups → the group on the EKS nodes (name contains lec07-nodes or eks)
+  Inbound → Add:
+    Type HTTP, port 80, source 0.0.0.0/0
+    Type Custom TCP, port 30000–32767, source 0.0.0.0/0
+  Save. Refresh the browser. Delete these rules in section Z with the cluster.
+
+If you see {"error": "not found"} you opened a path that is not /.
+If you see old JSON only, the image is lecture 6, not :l7. Check the Deployment image.
+
+JSON still works:
+
+  curl http://EXTERNAL-IP/health
+  curl http://EXTERNAL-IP/notes
+
+  [ ] Add note then Show notes shows the new line
+
+
+--------------------------------------------------
+K. kubectl: get, describe, logs, delete one Pod
+--------------------------------------------------
+
+CloudShell:
+
+  kubectl get pods
+  kubectl describe deploy notes
+  kubectl describe svc notes
+  kubectl logs -l app=notes --tail=20
+
+Delete the running Pod on purpose:
+
+  kubectl delete pod -l app=notes
+  kubectl get pods -w
+
+The name changes. Status goes Running again. The Deployment wanted 1 Pod, so it made a new one.
+Refresh the HTML page. Starter notes are back. The note you typed lived in the old process RAM.
+
+Stop the watch with Ctrl+C.
+
+  [ ] A new Pod appeared after delete. The extra note was gone.
+
+
+--------------------------------------------------
+Z. Cleanup  (do this before you stand up)
+--------------------------------------------------
+
+Order matters. The load balancer exists because of the Service. Delete the Service first.
+
+CloudShell:
+
+  kubectl delete svc notes
+  kubectl delete deploy notes
+
+Wait until EC2 → Load Balancers no longer shows the one Kubernetes created
+(or it is gone after a minute).
+
+Console:
+
+1. EKS → lec07-eks → Compute → node group lec07-nodes → Delete
+   Wait until it is gone.
+2. Cluster lec07-eks → Delete cluster. Type the name. Wait until it disappears.
+   The control plane charge stops when the cluster is gone, not when Pods are gone.
+3. EC2 → Instances → lec07-build → Terminate
+4. EC2 → Security Groups → lec07-build-ssh → Delete
+   Node / cluster security groups often delete with the cluster. If any lec07 leftover remains, delete it.
+5. ECR → notes-api → you may delete the repository, or leave it for lecture 8 and delete then.
+6. VPC → Your VPCs → notes-k8s → Actions → Delete VPC
+   The wizard can delete subnets, IGW, and route tables together.
+   If Delete is grey: a leftover ENI or load balancer still exists. Refresh, wait, try again.
+7. IAM → Roles → delete lec07-eks-cluster-role, lec07-eks-node-role, lec07-ec2-ecr
+
+  [ ] No EKS cluster, no leftover load balancer, VPC notes-k8s gone, build EC2 terminated
+
+
+--------------------------------------------------
+If something fails
+--------------------------------------------------
+
+Create cluster stuck / failed
+  Cluster role is not lec07-eks-cluster-role, or subnets are in one AZ only, or you used lecture 4’s private subnet.
+
+kubectl Unauthorized
+  Cluster creator access was off. Add an access entry with AmazonEKSClusterAdminPolicy.
+
+nodes 0
+  Node group still creating, or node role missing AmazonEKSWorkerNodePolicy / AmazonEKS_CNI_Policy.
+
+ImagePullBackOff
+  URI Region does not match, tag is not l7, or node role cannot read ECR.
+
+EXTERNAL-IP pending more than 10 minutes
+  Public subnets missing tag kubernetes.io/role/elb=1, or auto-assign public IPv4 is off.
+
+Browser hangs
+  Node security group has no 80 (section J).
+
+Add note works, Show notes loses it after you deleted a Pod
+  That is expected. Memory died with the process. Lecture 8 talks about two replicas.

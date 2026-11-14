@@ -49,3 +49,11 @@ CI/CD is **GitHub Actions**, not Jenkins. There is **no Git/GitHub lecture**. Ku
 - Lab: `docker build` / `run` on one Amazon Linux EC2; push `:l6` to Docker Hub and ECR; one Fargate task (public IP); `curl` `/health` from Windows; delete the same day. No Compose.
 - Assignment: `lec-06/assignment.md` — Fargate and the practice EC2 must be gone before the student leaves
 - Lecture 11 project is still one EC2 + GitHub Actions, not Fargate
+
+## Lecture 7 — Kubernetes on EKS
+
+[lec-07/README.md](lec-07/README.md)
+
+- Student-readable PowerPoint (why not Fargate only; cluster, Pod, Deployment, Service, diagrams)
+- Lab: VPC → ECR `notes-api:l7` → EKS in the console → Service LoadBalancer → HTML page in the browser. `kubectl` in CloudShell
+- Assignment: `lec-07/assignment.md` — delete the cluster the same day (control plane is billed while it exists)

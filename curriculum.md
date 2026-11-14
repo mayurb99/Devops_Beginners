@@ -76,15 +76,16 @@ Beginner-Friendly Learning Plan
 - Practical: `docker build` / `run` on one Amazon Linux EC2; Hub + ECR; Fargate demo; delete service, cluster, ECR, and EC2 the same day (~75 min).
 - Lecture 11 project remains one EC2 + GitHub Actions, not Fargate.
 
-## Lecture 7: Kubernetes
+## Lecture 7: Kubernetes on EKS
 *Module 3: Kubernetes and Terraform*
 
-- Why Kubernetes exists and where it is used.
-- Cluster architecture: control plane, node and kubelet.
-- Pods, ReplicaSets, Deployments and Services.
-- kubectl apply, get, describe, logs and delete.
-- Local cluster with kind. No EKS in this course (EKS is billed even when idle).
-- Practical: deploy notes-api on kind and curl the Service.
+- After Fargate: one task vs a cluster (many copies, restarts, stable Service URL).
+- Cluster: control plane (API server, etcd, scheduler, controller manager) and worker node (kubelet, runtime, Pod).
+- Pod, ReplicaSet, Deployment, Service, labels. Service type LoadBalancer (public hostname; you do not click Create load balancer).
+- EKS in the AWS console. AKS / GKE named only. Image from ECR (`notes-api:l7`).
+- HTML page at `/` (Add note / Show notes). Notes live in process RAM; `replicas: 1` today.
+- Practical: new VPC (two public subnets, no NAT) → ECR push → EKS + node group → kubectl in CloudShell → browser URL. Delete the cluster the same day (control plane is billed while it exists).
+- Lecture 11 project remains one EC2 + GitHub Actions, not EKS.
 
 ## Lecture 8: Kubernetes Administration
 *Module 3: Kubernetes and Terraform*

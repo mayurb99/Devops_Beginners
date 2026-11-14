@@ -1,0 +1,31 @@
+# Lecture 7 — keep one copy of notes-api running.
+# Replace IMAGE with your ECR URI including the tag :l7
+#   ACCOUNT.dkr.ecr.REGION.amazonaws.com/notes-api:l7
+#
+# replicas: 1  — one Pod, so Add note and Show notes share the same memory.
+# Lecture 8 will raise replicas. Then each Pod has its own list.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notes
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notes
+  template:
+    metadata:
+      labels:
+        app: notes
+    spec:
+      containers:
+        - name: notes
+          image: IMAGE
+          ports:
+            - containerPort: 8080
+          env:
+            - name: HOST
+              value: "0.0.0.0"
+            - name: PORT
+              value: "8080"
