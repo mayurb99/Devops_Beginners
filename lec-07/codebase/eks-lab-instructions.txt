@@ -9,6 +9,7 @@ kubectl runs in CloudShell (a terminal inside the AWS console). You do not insta
 
 Need: a browser, Git Bash (only for SSH to the build EC2), the SAME Region as lectures 4–6.
 You do not rewrite notes-api.py. You do not invent YAML.
+Picture of this lab: lec-07/resources/lecture-7-architecture.png
 
 Clock: about 75 minutes. Start the EKS cluster as soon as the VPC and IAM roles exist.
 The cluster takes 10–15 minutes. You push the image to ECR while you wait.

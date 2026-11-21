@@ -4,6 +4,8 @@ Module 3: Kubernetes and Terraform.
 
 **Read the deck first.** It starts from lecture 6 (why Fargate was enough for one task, and why you still learn Kubernetes). Then it explains the cluster, Pod, ReplicaSet, Deployment, Service, labels, ECR images, and EKS / AKS / GKE.
 
+**Architecture (PNG, AWS + Kubernetes logos):** `resources/lecture-7-architecture.png` — the picture of what class built.
+
 **What you build today:** a small VPC (two public subnets, no NAT), an ECR image `notes-api:l7` (HTML page at `/`), an EKS cluster in the console, one Deployment (`replicas: 1`), one Service `type: LoadBalancer`. You open the public hostname in your browser, add a note, show notes.
 
 **Terminal:** CloudShell in the AWS console for `kubectl`. Git Bash only to SSH into the tiny build EC2 (Windows has no Docker Desktop).
@@ -26,6 +28,8 @@ lec-07/
 │   │   └── service.yaml
 │   └── notes-api/
 └── resources/
+    ├── lecture-7-architecture.png
+    ├── generate-architecture.py
     ├── today-path.png
     ├── fargate-vs-k8s.png
     ├── cluster.png
