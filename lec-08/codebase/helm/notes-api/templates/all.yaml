@@ -1,0 +1,59 @@
+# Same objects as ../../k8s/. Helm is a packaging tool, not a second Kubernetes.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: notes-config
+data:
+  PAGE_TITLE: "notes-api"
+  PAGE_SUB: "Lecture 8 via Helm. Two Pods mean two lists."
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: notes-secret
+type: Opaque
+stringData:
+  NOTES_TOKEN: "class-token-not-a-real-key"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notes
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: notes
+  template:
+    metadata:
+      labels:
+        app: notes
+    spec:
+      containers:
+        - name: notes
+          image: {{ .Values.image | quote }}
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: notes-config
+            - secretRef:
+                name: notes-secret
+          env:
+            - name: HOST
+              value: "0.0.0.0"
+            - name: PORT
+              value: "8080"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notes
+spec:
+  type: LoadBalancer
+  selector:
+    app: notes
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080

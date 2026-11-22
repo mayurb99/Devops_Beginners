@@ -1,0 +1,3 @@
+# Replace image with your ECR URI:l8 if you try the optional Helm step.
+image: IMAGE
+replicas: 2

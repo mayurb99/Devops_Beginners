@@ -1,0 +1,13 @@
+# Lecture 8 — settings that are not a secret.
+# The running process reads these as env vars at start.
+# After you edit this file: kubectl apply -f configmap.yaml
+# then kubectl rollout restart deploy notes
+# (a live Pod does not reread the ConfigMap by itself.)
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: notes-config
+data:
+  PAGE_TITLE: "notes-api"
+  PAGE_SUB: "Lecture 8. Two Pods mean two lists."

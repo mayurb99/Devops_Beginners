@@ -1,0 +1,54 @@
+# Lecture 8 — two copies of notes-api.
+# Replace IMAGE with your ECR URI including the tag :l8
+#   ACCOUNT.dkr.ecr.REGION.amazonaws.com/notes-api:l8
+#
+# replicas: 2  — two Pods, two Python lists. That is the point today.
+# envFrom pulls PAGE_TITLE from the ConfigMap and NOTES_TOKEN from the Secret.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notes
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: notes
+  template:
+    metadata:
+      labels:
+        app: notes
+    spec:
+      containers:
+        - name: notes
+          image: IMAGE
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: notes-config
+            - secretRef:
+                name: notes-secret
+          env:
+            - name: HOST
+              value: "0.0.0.0"
+            - name: PORT
+              value: "8080"
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5

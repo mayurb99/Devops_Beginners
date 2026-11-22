@@ -1,0 +1,6 @@
+apiVersion: v2
+name: notes-api
+description: Tiny Lecture 8 chart. Same Deployment + Service as k8s/. Optional if the clock allows.
+type: application
+version: 0.1.0
+appVersion: "l8"

@@ -1,0 +1,478 @@
+Lecture 8 — Kubernetes administration (same EKS cluster)
+You already deployed notes-api on EKS (lecture 7) with replicas: 1.
+Today you run TWO copies, put the page title in a ConfigMap, put a dummy token in a Secret,
+watch Add/Show disagree, then break a Pod on purpose and roll back.
+
+Same cluster names as lecture 7 (lec07-eks, notes-k8s). You do not invent a second VPC.
+Windows has no Docker Desktop. You build :l8 on one Amazon Linux EC2.
+kubectl runs in CloudShell. You do not rewrite notes-api.py. You do not invent YAML.
+
+Need: a browser, Git Bash (SSH to the build EC2 only), the SAME Region as lectures 4–7.
+Picture of this lab: lec-08/resources/lecture-8-architecture.png
+Full VPC / IAM / cluster clicks (if you deleted everything): lec-07/codebase/eks-lab-instructions.txt sections A–G.
+
+Clock: about 75 minutes. Create the cluster first. Build :l8 while it cooks.
+Cleanup is part of this class. EKS is billed even with zero Pods.
+
+  0–8 min     recreate cluster if it is gone (or skip if lec07-eks is still Active)
+  8–22 min    read the deck (two lists, ConfigMap, Secret, three unhappy states, rollout)
+ 22–38 min    build notes-api:l8 on a tiny EC2, push ECR
+ 38–48 min    apply four YAML files, open the HTML page, prove two lists
+ 48–56 min    change the ConfigMap title, rollout restart
+ 56–66 min    ImagePullBackOff, CrashLoopBackOff, Pending, then rollout undo
+ 66–72 min    probes (/nope) and RBAC can-i. Helm only if cleanup is not at risk
+ 72–80 min    delete Service, node group, cluster, build EC2
+
+
+--------------------------------------------------
+Money — read this before any Create button
+--------------------------------------------------
+
+EKS control plane ≈ 0.10 USD per hour even if no Pods are running.
+The LoadBalancer Service creates an AWS load balancer until you delete the Service.
+Two t3.small nodes use hours. One t3.micro build box uses Free Tier hours if you still have them.
+
+If you left lec07-eks running from lecture 7, you are already being billed. Finish today’s lab, then delete it.
+Section Z is not optional.
+
+
+--------------------------------------------------
+0. Sign in and lock the Region
+--------------------------------------------------
+
+1. Open https://console.aws.amazon.com
+2. Top right: SAME Region as lectures 4–7.
+   REGION = _______________________________
+   ACCOUNT = _______________________________
+3. If the console looks empty, you are in the wrong Region.
+
+  [ ] REGION and ACCOUNT written down
+
+
+--------------------------------------------------
+R. Recreate the cluster if it is gone
+--------------------------------------------------
+
+EKS → Clusters → lec07-eks.
+
+If Status is Active and a node group lec07-nodes is Active:
+  Skip to section E (build :l8). You already have a cluster.
+
+If the cluster is missing, use lecture 7’s click path with the SAME names.
+Open: lec-07/codebase/eks-lab-instructions.txt
+
+  A  VPC notes-k8s  10.7.0.0/16  two public subnets  no NAT
+     tags on BOTH public subnets:
+       kubernetes.io/role/elb = 1
+       kubernetes.io/cluster/lec07-eks = shared
+     auto-assign public IPv4 ON
+  B  three roles: lec07-eks-cluster-role / lec07-eks-node-role / lec07-ec2-ecr
+  C  ECR repo notes-api (reuse from lecture 6/7)
+  D  Create cluster lec07-eks NOW, then leave it Creating
+  F  node group lec07-nodes  t3.small  desired 2  both public subnets
+  G  CloudShell: aws eks update-kubeconfig --name lec07-eks --region $REGION
+
+Do not wait for Docker before you click Create cluster.
+If VPC notes-k8s and the three roles still exist, skip A and B.
+
+  [ ] lec07-eks is Creating or Active
+
+
+--------------------------------------------------
+E. Build notes-api:l8 and push to ECR  (console + Git Bash)
+--------------------------------------------------
+
+Lecture 7’s image does not read PAGE_TITLE from a ConfigMap.
+You build this lecture’s folder and push tag l8.
+
+
+E1. SSH key
+
+Reuse ~/lec07-docker.pem if you still have it.
+If not: EC2 → Key Pairs → Create lec08-docker → RSA → .pem
+  mv /c/Users/mayur_brijwani/Downloads/lec08-docker.pem ~/lec08-docker.pem
+  chmod 400 ~/lec08-docker.pem
+
+KEYFILE = _______________________________
+
+
+E2. Security group for the build box — SSH only
+
+Reuse lec07-build-ssh in VPC notes-k8s if it still exists.
+If not: EC2 → Security Groups → Create
+  Name: lec08-build-ssh
+  VPC: notes-k8s
+  Inbound: SSH 22  Source My IP
+  Do not open 80 or 8080 here.
+
+
+E3. Launch the build EC2
+
+1. EC2 → Launch instance
+   Name: lec08-build
+   AMI: Amazon Linux 2023
+   Type: t3.micro
+   Key: the key that matches KEYFILE
+   Network: VPC notes-k8s, a public subnet, Auto-assign public IP Enable
+   Security group: the SSH group from E2
+   Advanced details → IAM instance profile: lec07-ec2-ecr
+2. Launch. Wait Running + Status check 2/2.
+   BUILD_IP = _______________________________
+
+
+E4. SSH and install Docker  (Git Bash)
+
+  ssh -i $KEYFILE -o StrictHostKeyChecking=accept-new ec2-user@$BUILD_IP
+
+On the EC2:
+
+  sudo dnf install -y docker git
+  sudo systemctl enable --now docker
+  sudo docker version
+
+
+E5. Put lecture 8 notes-api on the box
+
+A. git clone (on the EC2):
+
+  git clone https://github.com/mayurb99/Devops_Beginners.git
+  cp -r ~/Devops_Beginners/lec-08/codebase/notes-api ~/notes-api
+
+If there is no lec-08 folder, use B.
+
+B. scp from Windows (third Git Bash):
+
+  cd "/c/Users/mayur_brijwani/Desktop/New folder (2)/Devops_Beginners/lec-08/codebase"
+  scp -i $KEYFILE -r notes-api ec2-user@$BUILD_IP:~/
+
+
+E6. Build and push
+
+  cd ~/notes-api
+  cat Dockerfile
+  sudo docker build -t notes-api:l8 .
+
+  REGION=_______________________________
+  ACCOUNT=_______________________________
+  URI=$ACCOUNT.dkr.ecr.$REGION.amazonaws.com/notes-api
+
+  aws sts get-caller-identity
+  aws ecr get-login-password --region $REGION | sudo docker login --username AWS --password-stdin $ACCOUNT.dkr.ecr.$REGION.amazonaws.com
+  sudo docker tag notes-api:l8 $URI:l8
+  sudo docker push $URI:l8
+
+Console: ECR → notes-api → you should see tag l8.
+
+  [ ] ECR shows notes-api:l8
+
+
+--------------------------------------------------
+G. CloudShell — kubectl talks to THIS cluster
+--------------------------------------------------
+
+Wait until the cluster and node group are Active.
+
+1. CloudShell icon (terminal, top right). Region drop-down matches REGION.
+
+  aws eks update-kubeconfig --name lec07-eks --region $REGION
+  kubectl get nodes
+
+Two rows, Ready.
+If Unauthorized: Cluster → Access tab → access entry with AmazonEKSClusterAdminPolicy.
+
+  [ ] kubectl get nodes shows Ready
+
+
+--------------------------------------------------
+H. Apply four files  (ConfigMap, Secret, Deployment, Service)
+--------------------------------------------------
+
+URI=ACCOUNT.dkr.ecr.REGION.amazonaws.com/notes-api
+
+  git clone https://github.com/mayurb99/Devops_Beginners.git
+  cd Devops_Beginners/lec-08/codebase/k8s
+  sed -i "s|image: IMAGE|image: ${URI}:l8|" deployment.yaml
+  cat deployment.yaml
+
+  kubectl apply -f configmap.yaml
+  kubectl apply -f secret.yaml
+  kubectl apply -f deployment.yaml
+  kubectl apply -f service.yaml
+  kubectl get deploy,pods,svc
+
+You want:
+  deploy notes    READY 2/2
+  two Pods        Running
+  svc notes       EXTERNAL-IP starts as <pending>, then a hostname
+
+If clone has no lec-08, paste the four files from this folder yourself, with IMAGE already replaced.
+
+If a Pod is ImagePullBackOff: the URI is wrong, the tag is not :l8, or the node role is missing AmazonEC2ContainerRegistryReadOnly.
+  kubectl describe pod -l app=notes
+
+If EXTERNAL-IP stays <pending> a long time: subnet missing kubernetes.io/role/elb=1, or not public.
+
+  HOST = the EXTERNAL-IP hostname
+  URL  = http://HOST/
+  Write URL = _______________________________
+
+  [ ] two Pods Running and a hostname
+
+
+--------------------------------------------------
+J. Browser — two lists  (the point of today)
+--------------------------------------------------
+
+1. Open http://HOST/   — http, no :8080, no https.
+2. You should see the notes page. Subtitle says two Pods mean two lists.
+3. Look at the footer: “This page was served by Pod: notes-xxxxx”.
+4. Click Show notes several times. Refresh the tab too.
+   The Pod name should change. That is the Service picking Pod A, then Pod B.
+5. Type a unique line (your name + a number). Add note.
+6. Click Show notes several times again.
+
+What you should see at least once:
+  - the extra line is there, and the Pod name is one value
+  - later the extra line is gone, and the Pod name is the other value
+
+Each Pod has its own Python list. The Service does not share RAM.
+If Add and Show always hit the same Pod, click Show a few more times. It will flip.
+
+If the browser spins: EC2 → Security Groups → the EKS node group’s group → inbound HTTP 80 from 0.0.0.0/0
+(and Custom TCP 30000–32767 from 0.0.0.0/0 for this hour). Refresh.
+
+  [ ] I saw two different Pod names
+  [ ] I saw a note appear, then disappear on another Show
+
+
+--------------------------------------------------
+K. ConfigMap — change the title without a new image
+--------------------------------------------------
+
+The heading comes from PAGE_TITLE. That is not baked into :l8.
+
+  kubectl get configmap notes-config -o yaml
+  kubectl edit configmap notes-config
+
+Change PAGE_TITLE to: Lecture 8 notes
+Save and quit (in CloudShell: Esc, then :wq).
+
+A running process does not reread the ConfigMap by itself.
+
+  kubectl rollout restart deploy notes
+  kubectl rollout status deploy notes
+  kubectl get pods
+
+Refresh the browser. The heading should say Lecture 8 notes.
+The image tag is still :l8. You did not docker build again.
+
+  [ ] heading changed after restart, image still :l8
+
+
+--------------------------------------------------
+L. Secret — the app reads it and prints the dummy value
+--------------------------------------------------
+
+The page already printed PAGE_TITLE and PAGE_SUB from the ConfigMap (the heading).
+Now check the grey box at the bottom: “From Secret” should show
+  NOTES_TOKEN: class-token-not-a-real-key
+
+That string came from secret.yaml through env, not from docker build.
+
+  kubectl get secret notes-secret -o yaml
+
+You will see a base64 blob for NOTES_TOKEN. That is encoding, not encryption.
+Anyone with kubectl can decode it. Do not paste AWS keys here.
+
+  curl -s http://HOST/health
+
+health JSON includes "title", "sub", and "token" — the same three strings as the page.
+
+A real app would not print a Secret on a public page. We print this dummy so you can see both objects working.
+
+  [ ] ConfigMap values are on the page (heading + From ConfigMap)
+  [ ] Secret dummy token is on the page (From Secret)
+
+
+--------------------------------------------------
+M. Break, read, undo  (three unhappy states)
+--------------------------------------------------
+
+Keep kubectl describe and kubectl logs as your two tools.
+You are not guessing. You are reading Events.
+
+
+M1. ImagePullBackOff  (wrong tag)
+
+  kubectl set image deploy/notes notes=$URI:no-such-tag
+  kubectl get pods
+  kubectl describe pod -l app=notes | tail -30
+
+You should see ImagePullBackOff / ErrImagePull.
+The node asked ECR for a tag that does not exist.
+
+Undo:
+
+  kubectl rollout undo deploy/notes
+  kubectl rollout status deploy/notes
+  kubectl get pods
+
+Pods Running again. Refresh the page.
+
+
+M2. CrashLoopBackOff  (process exits)
+
+  kubectl set env deploy/notes CRASH=1
+  kubectl get pods -w
+
+Wait until you see CrashLoopBackOff. Ctrl+C stops the watch.
+
+  kubectl logs -l app=notes --tail=20
+  kubectl describe pod -l app=notes | tail -20
+
+Logs should say CRASH=1 is set. Exiting on purpose.
+
+Undo:
+
+  kubectl set env deploy/notes CRASH-
+  kubectl rollout status deploy/notes
+  kubectl get pods
+
+
+M3. Pending  (the node has no room for this request)
+
+  kubectl patch deploy notes --type json -p "[{\"op\":\"replace\",\"path\":\"/spec/template/spec/containers/0/resources/requests/memory\",\"value\":\"8Gi\"}]"
+  kubectl get pods
+  kubectl describe pod -l app=notes | tail -25
+
+New Pods sit Pending. Events say Insufficient memory (or similar).
+The cluster did not start them. They are waiting.
+
+Undo:
+
+  kubectl rollout undo deploy/notes
+  kubectl rollout status deploy/notes
+  kubectl get pods
+
+If undo does not clear Pending: kubectl delete deploy notes
+then apply deployment.yaml again (IMAGE still :l8).
+
+  [ ] I saw ImagePullBackOff and undid it
+  [ ] I saw CrashLoopBackOff and undid it
+  [ ] I saw Pending and undid it
+
+
+--------------------------------------------------
+P. Probes  (simple) — do this after M is healthy
+--------------------------------------------------
+
+Your Deployment already knocks on GET /health.
+P1 asks liveness to knock on a door that does not exist → kubelet restarts the container.
+P2 asks readiness to knock on that door → Pod stays up, Service stops sending traffic.
+
+
+P1. Liveness  (are you alive?)
+
+  kubectl patch deploy notes --type json -p '[{"op":"replace","path":"/spec/template/spec/containers/0/livenessProbe/httpGet/path","value":"/nope"}]'
+  kubectl get pods
+  kubectl describe pod -l app=notes | tail -25
+
+Restarts go up. Events say Liveness probe failed.
+The process is not answering /nope. kubelet restarts it.
+
+  kubectl rollout undo deploy notes
+  kubectl rollout status deploy notes
+
+
+P2. Readiness  (should the Service send people here?)
+
+  kubectl patch deploy notes --type json -p '[{"op":"replace","path":"/spec/template/spec/containers/0/readinessProbe/httpGet/path","value":"/nope"}]'
+  kubectl get pods
+  kubectl get endpoints notes
+  kubectl logs -l app=notes --tail=5
+
+Pods show Running 0/1 Ready. Endpoints look empty.
+The process is still up (logs still print). The door is shut.
+Refresh http://HOST/ — the page hangs or fails.
+
+  kubectl rollout undo deploy notes
+  kubectl rollout status deploy notes
+  Refresh the page. It works again.
+
+  [ ] liveness: Restarts went up, then undo
+  [ ] readiness: 0/1 Ready, page hung, logs still printed, then undo
+
+
+--------------------------------------------------
+Q. RBAC  (simple) — no second AWS user
+--------------------------------------------------
+
+Lecture 7’s access entry made YOU cluster admin. That is why CloudShell can apply and delete.
+This demo creates a tiny identity that may only get/list Pods.
+
+  kubectl create sa notes-reader
+  kubectl create role notes-pod-reader --verb=get,list --resource=pods
+  kubectl create rolebinding notes-pod-reader --role=notes-pod-reader --serviceaccount=default:notes-reader
+
+  kubectl auth can-i get pods --as=system:serviceaccount:default:notes-reader
+  kubectl auth can-i delete pods --as=system:serviceaccount:default:notes-reader
+  kubectl auth can-i get secrets --as=system:serviceaccount:default:notes-reader
+
+You want: yes  /  no  /  no
+
+  kubectl delete rolebinding notes-pod-reader
+  kubectl delete role notes-pod-reader
+  kubectl delete sa notes-reader
+
+  [ ] can-i get pods was yes, delete pods was no
+
+
+--------------------------------------------------
+N. Optional — Helm  (skip if Section Z is at risk)
+--------------------------------------------------
+
+Helm packages the same YAML. It is not a second cluster.
+Do not helm install Prometheus on this class cluster (billed, slow, not today’s app).
+
+  curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  helm version
+
+  cd ~/Devops_Beginners/lec-08/codebase
+  kubectl delete deploy notes svc notes
+  helm upgrade --install notes ./helm/notes-api --set image=${URI}:l8
+  kubectl get pods,svc
+  helm list
+  helm uninstall notes
+
+Same HTML page if you wait for EXTERNAL-IP again. Then go to Z.
+
+If you skip Helm, that is fine. Lecture 15 will see it again.
+
+
+--------------------------------------------------
+Z. Delete in this order
+--------------------------------------------------
+
+  kubectl delete svc notes
+  kubectl delete deploy notes
+  kubectl delete configmap notes-config
+  kubectl delete secret notes-secret
+  kubectl delete rolebinding notes-pod-reader --ignore-not-found
+  kubectl delete role notes-pod-reader --ignore-not-found
+  kubectl delete sa notes-reader --ignore-not-found
+  helm uninstall notes 2>/dev/null || true
+
+Console:
+1. EKS → lec07-eks → Compute → delete node group lec07-nodes. Wait until it is gone.
+2. Delete cluster lec07-eks. Wait until it is gone. This stops the control-plane bill.
+3. EC2 → terminate lec08-build (and lec07-build if it is still there).
+4. VPC → delete notes-k8s. Grey Delete = wait; a leftover load balancer or ENI is still attached.
+5. IAM → delete the three lec07-* roles if nothing else uses them.
+
+  [ ] Service gone (hostname gone)
+  [ ] node group gone
+  [ ] cluster lec07-eks gone
+  [ ] build EC2 terminated
+  [ ] VPC deleted (or noted why Delete is grey)
+
+Fill ../assignment.md before you leave.

@@ -90,13 +90,14 @@ Beginner-Friendly Learning Plan
 ## Lecture 8: Kubernetes Administration
 *Module 3: Kubernetes and Terraform*
 
-- ConfigMaps and Secrets.
-- Requests, limits, liveness and readiness probes.
-- Rolling updates and rollout undo.
-- Pending, CrashLoopBackOff and ImagePullBackOff.
-- Helm for notes-api.
-- Basic RBAC.
-- Practical: break a Pod, debug it, then roll back.
+- Same EKS cluster names as lecture 7 (`lec07-eks`). Recreate if deleted. Image `notes-api:l8`.
+- `replicas: 2`: two Python lists behind one LoadBalancer URL. Footer Pod name flips. Extra notes can vanish.
+- ConfigMap = page title (no new docker build). Secret = dummy token. The HTML page prints both so you can see the app read them. Base64 is not encryption.
+- Pending, ImagePullBackOff, CrashLoopBackOff. `kubectl describe` and `logs`. `rollout undo`.
+- Requests vs limits (Pending demo). Liveness vs readiness (patch `/health` to `/nope`). RBAC `auth can-i` on a reader ServiceAccount (no second IAM user).
+- Helm: same YAML as a chart. Why teams use it for many files and for tools (Prometheus / Ingress) vs copy-paste YAML. Optional `helm install` of notes-api.
+- Practical: HTML page, crash states, probe patches, can-i, optional Helm. Delete the cluster the same day.
+- Lecture 11 project remains one EC2 + GitHub Actions, not EKS.
 
 ## Lecture 9: Terraform
 *Module 3: Kubernetes and Terraform*

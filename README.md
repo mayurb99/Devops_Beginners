@@ -4,7 +4,7 @@ A 16-lecture beginner DevOps course for a **DevOps Engineer** seat on **AWS Free
 
 **Syllabus (1–2 page index):** [curriculum.md](curriculum.md) · [DevOps-Foundation-Curriculum.docx](DevOps-Foundation-Curriculum.docx)
 
-CI/CD is **GitHub Actions**, not Jenkins. There is **no Git/GitHub lecture**. Kubernetes is on the laptop (`kind`), not EKS. The AWS deploy is **one** free-tier EC2 running a container.
+CI/CD is **GitHub Actions**, not Jenkins. There is **no Git/GitHub lecture**. Lectures 7–8 use **EKS in the console** (delete the cluster the same day). The course project in lecture 11 is still **one** free-tier EC2 running a container.
 
 ## Lecture 1 — Introduction to DevOps and Linux
 
@@ -57,3 +57,12 @@ CI/CD is **GitHub Actions**, not Jenkins. There is **no Git/GitHub lecture**. Ku
 - Student-readable PowerPoint (why not Fargate only; cluster, Pod, Deployment, Service, diagrams)
 - Lab: VPC → ECR `notes-api:l7` → EKS in the console → Service LoadBalancer → HTML page in the browser. `kubectl` in CloudShell
 - Assignment: `lec-07/assignment.md` — delete the cluster the same day (control plane is billed while it exists)
+
+## Lecture 8 — Kubernetes administration
+
+[lec-08/README.md](lec-08/README.md)
+
+- Student-readable PowerPoint (two lists, ConfigMap vs image, Secret, three unhappy states, rollout pictures)
+- Lab: reuse or recreate `lec07-eks`; push `notes-api:l8`; `replicas: 2`; ConfigMap title; break ImagePull / CrashLoop / Pending; `rollout undo`. `kubectl` in CloudShell
+- Assignment: `lec-08/assignment.md` — delete the cluster the same day
+- Helm is optional. Lecture 11 project is still one EC2 + GitHub Actions, not EKS

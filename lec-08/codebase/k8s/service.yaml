@@ -1,0 +1,17 @@
+# Lecture 8 — same door as lecture 7.
+# type LoadBalancer: Kubernetes asks AWS for a public hostname.
+# You do not click Create load balancer in the EC2 console.
+# One Service in front of TWO Pods. The Service picks a Pod per request.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: notes
+spec:
+  type: LoadBalancer
+  selector:
+    app: notes
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
