@@ -23,10 +23,6 @@ lec-06/
 │       ├── .dockerignore
 │       └── README.md
 └── resources/
-    ├── path.png
-    ├── hub-ecr.png
-    ├── three-clouds.png
-    ├── ec2-vs-fargate.png
     ├── commands-cheatsheet.md
     └── interview-questions.md
 ```

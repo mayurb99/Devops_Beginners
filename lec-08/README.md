@@ -32,19 +32,6 @@ lec-08/
 │   └── notes-api/
 └── resources/
     ├── lecture-8-architecture.png
-    ├── generate-architecture.py
-    ├── generate-diagrams.py
-    ├── today-path.png
-    ├── two-lists.png
-    ├── config-vs-image.png
-    ├── secret-vs-config.png
-    ├── crash-states.png
-    ├── rollout.png
-    ├── three-clouds.png
-    ├── resources.png
-    ├── probes.png
-    ├── rbac.png
-    ├── helm-vs-apply.png
     ├── commands-cheatsheet.md
     └── interview-questions.md
 ```

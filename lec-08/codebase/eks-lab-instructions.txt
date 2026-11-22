@@ -341,12 +341,15 @@ Undo:
 
 M3. Pending  (the node has no room for this request)
 
-  kubectl patch deploy notes --type json -p "[{\"op\":\"replace\",\"path\":\"/spec/template/spec/containers/0/resources/requests/memory\",\"value\":\"8Gi\"}]"
+Request cannot be bigger than limit. Today limit is 128Mi, so 8Gi request alone is rejected.
+Patch BOTH to 8Gi. t3.small has about 2Gi, so the scheduler still cannot place the Pod.
+
+  kubectl patch deploy notes --type json -p '[{"op":"replace","path":"/spec/template/spec/containers/0/resources/requests/memory","value":"8Gi"},{"op":"replace","path":"/spec/template/spec/containers/0/resources/limits/memory","value":"8Gi"}]'
   kubectl get pods
   kubectl describe pod -l app=notes | tail -25
 
 New Pods sit Pending. Events say Insufficient memory (or similar).
-The cluster did not start them. They are waiting.
+The cluster did not start them. They are waiting. This is not CrashLoop.
 
 Undo:
 
@@ -438,7 +441,7 @@ Do not helm install Prometheus on this class cluster (billed, slow, not today’
   helm version
 
   cd ~/Devops_Beginners/lec-08/codebase
-  kubectl delete deploy notes svc notes
+  kubectl delete deploy notes svc notes configmap notes-config secret notes-secret
   helm upgrade --install notes ./helm/notes-api --set image=${URI}:l8
   kubectl get pods,svc
   helm list

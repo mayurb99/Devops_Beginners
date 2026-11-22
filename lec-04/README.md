@@ -42,7 +42,6 @@ lec-04/
 │   └── aws-lab-instructions.txt
 └── resources/
     ├── lecture-4-architecture.png
-    ├── generate-architecture.py
     ├── commands-cheatsheet.md
     └── interview-questions.md
 ```

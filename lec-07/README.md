@@ -29,14 +29,6 @@ lec-07/
 │   └── notes-api/
 └── resources/
     ├── lecture-7-architecture.png
-    ├── generate-architecture.py
-    ├── today-path.png
-    ├── fargate-vs-k8s.png
-    ├── cluster.png
-    ├── four-objects.png
-    ├── labels.png
-    ├── memory.png
-    ├── three-clouds.png
     ├── commands-cheatsheet.md
     └── interview-questions.md
 ```
